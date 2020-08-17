@@ -23,6 +23,7 @@ public class UDPHelper {
     private boolean isOpened = false;
     private boolean isStartRecv = false;
     public String ReceivedMsg;
+    public Object apiThreadLock = new Object();
 
     public UDPHelper() {
     }
@@ -57,21 +58,23 @@ public class UDPHelper {
         return isOpened;
     }
 
-    public void openSocket() {
+    public synchronized void openSocket() {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    if (isOpened) {
-                        return;
+                synchronized (apiThreadLock) {
+                    try {
+                        if (isOpened) {
+                            return;
+                        }
+                        mSocket = new DatagramSocket(LocalPort);
+                        mSocket.setSoTimeout(1000);//timeout for read
+                        isOpened = true;
+                    } catch (Exception e) {
+                        mSocket = null;
+                        isOpened = false;
+                        Log.e(TAG, "openSocket error.e=" + e.toString());
                     }
-                    mSocket = new DatagramSocket(LocalPort);
-                    mSocket.setSoTimeout(1000);//timeout for read
-                    isOpened = true;
-                } catch (Exception e) {
-                    mSocket = null;
-                    isOpened = false;
-                    Log.e(TAG, "openSocket error.e=" + e.toString());
                 }
             }
         }).start();
@@ -122,49 +125,52 @@ public class UDPHelper {
         }
     };
 
-    public void startReceiveData() {
+    public synchronized void startReceiveData() {
+        if (isStartRecv) return;
         receiveThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (mSocket == null || mSocket.isClosed()) {
-                    Log.e(TAG, "run: socket is inavilable");
-                    return;
-                }
-                Log.d(TAG, "startReceiveData ok.");
-
-                isStartRecv = true;
-                byte[] datas = new byte[512];
-                //DatagramPacket packet = new DatagramPacket(datas, datas.length, null, LocalPort);
-                DatagramPacket packet = new DatagramPacket(datas, datas.length);
-
-                while (isStartRecv) {
+                synchronized (apiThreadLock) {
                     try {
-                        mSocket.receive(packet);
-                        iaRemoteIP = packet.getAddress();
-                        ReceivedMsg = new String(packet.getData()).trim();
-                        mHandler.sendEmptyMessage(100);
-                        java.util.Arrays.fill(datas, (byte) 0);
-                        Log.d(TAG, "recv:(" + iaRemoteIP.getHostAddress() + ")" + ReceivedMsg);
-                    } catch (SocketTimeoutException e) {
-                        //超时，继续接受
-                        Log.d(TAG, "receiveThread: timeout!");
-                    } catch (Exception e) {
-                        Log.e(TAG, "startReceiveData error.e=" + e.toString());
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
+                    if (mSocket == null || mSocket.isClosed()) {
+                        Log.e(TAG, "run: socket is inavilable");
+                        return;
+                    }
+                    Log.d(TAG, "startReceiveData ok.");
+
+                    isStartRecv = true;
+                    byte[] datas = new byte[512];
+                    //DatagramPacket packet = new DatagramPacket(datas, datas.length, null, LocalPort);
+                    DatagramPacket packet = new DatagramPacket(datas, datas.length);
+
+                    while (isStartRecv) {
+                        try {
+                            mSocket.receive(packet);
+                            iaRemoteIP = packet.getAddress();
+                            ReceivedMsg = new String(packet.getData()).trim();
+                            mHandler.sendEmptyMessage(100);
+                            java.util.Arrays.fill(datas, (byte) 0);
+                            Log.d(TAG, "recv:(" + iaRemoteIP.getHostAddress() + ")" + ReceivedMsg);
+                        } catch (SocketTimeoutException e) {
+                            //超时，继续接受
+                            Log.d(TAG, "receiveThread: is waiting...");
+                        } catch (Exception e) {
+                            Log.e(TAG, "startReceiveData error.e=" + e.toString());
+                        }
+                    }
+                    isStartRecv = false;
+                    Log.d(TAG, "receiveThread: end!");
                 }
-                isStartRecv = false;
-                Log.d(TAG, "receiveThread: end!");
             }
         });
         receiveThread.start();
     }
 
-    public void stopReceiveData() {
+    public synchronized void stopReceiveData() {
         if (!isStartRecv) return;
         isStartRecv = false;
         try {
@@ -181,43 +187,44 @@ public class UDPHelper {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    if(isStartRecv){
-                        stopReceiveData();
+                synchronized (apiThreadLock) {
+                    try {
+                        if (isStartRecv) {
+                            stopReceiveData();
+                        }
+                        if (mSocket != null && !mSocket.isClosed()) {
+                            mSocket.close();
+                            mSocket = null;
+                        }
+                        isOpened = false;
+                        Log.d(TAG, "closeSocket: ok");
+                    } catch (Exception e) {
+                        Log.e(TAG, "closeSocket error.e=" + e.toString());
                     }
-                    if (mSocket != null && !mSocket.isClosed()) {
-                        mSocket.close();
-                        mSocket = null;
-                    }
-                    isOpened = false;
-                    Log.d(TAG, "closeSocket: ok");
-                } catch (Exception e) {
-                    Log.e(TAG, "closeSocket error.e=" + e.toString());
                 }
             }
         }).start();
     }
 
-    public void restartReceiveData(){
-        new Thread(){
+    public void restartReceiveData() {
+        new Thread() {
             @Override
             public void run() {
-                if (isStartRecv) {
-                    isStartRecv = false;
-                    try {
-                        if (receiveThread != null && receiveThread.isAlive()) {
-                            receiveThread.join();
-                            receiveThread = null;
+                synchronized (apiThreadLock) {
+                    //停止接收线程
+                    if (isStartRecv) {
+                        isStartRecv = false;
+                        try {
+                            if (receiveThread != null && receiveThread.isAlive()) {
+                                receiveThread.join();
+                                receiveThread = null;
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "stopReceiveData error.e=" + e.toString());
                         }
-                    } catch (Exception e) {
-                        Log.e(TAG, "stopReceiveData error.e=" + e.toString());
                     }
                 }
-                if (isOpened && mSocket != null && !mSocket.isClosed()) {
-                    mSocket.close();
-                    mSocket = null;
-                    isOpened = false;
-                }
+                closeSocket();
                 openSocket();
                 startReceiveData();
             }
