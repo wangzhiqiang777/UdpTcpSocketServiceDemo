@@ -25,6 +25,7 @@ public class SocketService extends Service {
         udpHelper.setOnUDPReceiveListener(new UDPHelper.OnUDPReceiveListener() {
             @Override
             public void onReceived(String data) {
+                Log.d(TAG, "onReceived: data="+data);
                 synchronized (mListenerList) {
                     int n = mListenerList.beginBroadcast();
                     try {
@@ -41,6 +42,8 @@ public class SocketService extends Service {
                 }
             }
         });
+        udpHelper.openSocket();
+        udpHelper.startReceiveData();
     }
 
     @Override
@@ -50,6 +53,10 @@ public class SocketService extends Service {
             @Override
             public void setLocalPort(int Port) throws RemoteException {
                 udpHelper.setLocalPort(Port);
+                udpHelper.stopReceiveData();
+                udpHelper.closeSocket();
+                udpHelper.openSocket();
+                udpHelper.startReceiveData();
             }
 
             @Override
@@ -75,6 +82,12 @@ public class SocketService extends Service {
             @Override
             public int getRemotePort() throws RemoteException {
                 return udpHelper.getRemotePort();
+            }
+
+            @Override
+            public void sendText(String text) throws RemoteException {
+//                Log.d(TAG, "sendText: text="+text);
+                udpHelper.send(text);
             }
 
             @Override

@@ -17,6 +17,7 @@ interface ISocketBinder {
     String getRemoteIP();
     void setRemotePort(int port);
     int getRemotePort();
+    void sendText(String text);
 
     void registerListener(IOnSocketReceivedListener listener);
     void unregisterListener(IOnSocketReceivedListener listener);
