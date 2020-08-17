@@ -14,10 +14,12 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, CompoundButton.OnCheckedChangeListener {
 
     private static final String TAG = "MainActivity";
     EditText etRemoteIP;
@@ -27,6 +29,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     EditText etRecieveText;
     Button btnSend;
     Button btnClearReceive;
+    Switch swUdp, swTcp,swTcpServer;
 
     ISocketBinder socketBinder;
     ServiceConnection connection = new ServiceConnection() {
@@ -68,6 +71,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         etRecieveText = findViewById(R.id.etReceiveText);
         btnSend = findViewById(R.id.buttonSend);
         btnClearReceive = findViewById(R.id.buttonClearReceive);
+        swUdp = findViewById(R.id.switchUdp);
+        swTcp = findViewById(R.id.switchTcp);
+        swTcpServer = findViewById(R.id.switchTcpServer);
+
         etRemoteIP.setInputType(InputType.TYPE_NULL);
         etRemotePort.setInputType(InputType.TYPE_NULL);
         etLocalPort.setInputType(InputType.TYPE_NULL);
@@ -78,6 +85,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         etLocalPort.setOnClickListener(this);
         btnSend.setOnClickListener(this);
         btnClearReceive.setOnClickListener(this);
+
+        swUdp.setOnCheckedChangeListener(this);
+        swTcp.setOnCheckedChangeListener(this);
+        swTcpServer.setOnCheckedChangeListener(this);
     }
 
     @Override
@@ -163,5 +174,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 });
         builder.show();
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+        switch (compoundButton.getId()){
+            case R.id.switchUdp:
+                try {
+                    socketBinder.setUDPEnabled(b);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case R.id.switchTcp:
+                try {
+                    socketBinder.setTCPEnabled(b);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case R.id.switchTcpServer:
+                try {
+                    socketBinder.setTCPServerEnabled(b);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
     }
 }

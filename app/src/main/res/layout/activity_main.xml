@@ -131,4 +131,41 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/etReceiveText" />
 
+    <Switch
+        android:id="@+id/switchUdp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="UDP"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/switchTcp"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/etReceiveText" />
+
+    <Switch
+        android:id="@+id/switchTcp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TCP Client"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="@+id/switchUdp"
+        app:layout_constraintEnd_toStartOf="@+id/switchTcpServer"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/switchUdp"
+        app:layout_constraintTop_toTopOf="@+id/switchUdp" />
+
+    <Switch
+        android:id="@+id/switchTcpServer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TCP Server"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="@+id/switchTcp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/switchTcp"
+        app:layout_constraintTop_toTopOf="@+id/switchTcp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

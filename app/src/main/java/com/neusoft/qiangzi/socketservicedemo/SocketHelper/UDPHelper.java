@@ -28,6 +28,10 @@ public class UDPHelper {
     public UDPHelper() {
     }
 
+    public UDPHelper(int localPort) {
+        this.LocalPort = localPort;
+    }
+
     public void setLocalPort(int Port) {
         this.LocalPort = Port;
         Log.d(TAG, "setLocalPort: port=" + Port);

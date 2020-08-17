@@ -22,7 +22,7 @@ public class TCPHelper {
     private Socket mSocket = null;
     private OutputStream outputStream = null;
     private InputStream inputStream = null;
-    private OnTCPReceiveListener mListener = null;
+    private OnReceivedListener mListener = null;
     private OnTCPEventListener eventListener = null;
     private Thread receiveThread = null;
     private InetAddress iaRemoteIP = null;
@@ -34,13 +34,33 @@ public class TCPHelper {
     public TCPHelper() {
     }
 
+    public TCPHelper(Socket socket) {
+        if(socket != null && socket.isConnected()){
+            mSocket = socket;
+            remoteIP = mSocket.getRemoteSocketAddress().toString();
+            Log.d(TAG, "TCPHelper: remoteIP="+remoteIP);
+            remotePort = mSocket.getPort();
+            Log.d(TAG, "TCPHelper: remotePort="+remotePort);
+            localPort = mSocket.getLocalPort();
+            Log.d(TAG, "TCPHelper: localPort="+localPort);
+            try {
+                mSocket.setSoTimeout(1000);//timeout for read
+                mSocket.setKeepAlive(true);
+                outputStream = mSocket.getOutputStream();
+                inputStream = mSocket.getInputStream();
+                isOpened = true;
+                Log.d(TAG, "TCPHelper: Create OK!");
+            } catch (Exception e) {
+                e.printStackTrace();
+                isOpened = false;
+                mSocket = null;
+            }
+        }
+    }
+
     public TCPHelper(String remoteIP, int remotePort) {
         this.remoteIP = remoteIP;
         this.remotePort = remotePort;
-    }
-
-    public void setLocalPort(int Port) {
-        this.localPort = Port;
     }
 
     public int getLocalPortPort() {
@@ -66,7 +86,7 @@ public class TCPHelper {
         remotePort = port;
     }
 
-    public int getRemotePortPort() {
+    public int getRemotePort() {
         return remotePort;
     }
 
@@ -91,8 +111,9 @@ public class TCPHelper {
                     inputStream = mSocket.getInputStream();
                     isOpened = true;
                     mHandler.sendEmptyMessage(HANDLE_OPEN_SUCCESS);
+                    Log.d(TAG, "openSocket OK!");
                 } catch (SocketTimeoutException e) {
-                    Log.d(TAG, "openSocket timeout!");
+                    Log.e(TAG, "openSocket timeout!");
                     mHandler.sendEmptyMessage(HANDLE_OPEN_TIMEOUT);
                     closeSocket();
                 } catch (Exception e) {
@@ -126,7 +147,7 @@ public class TCPHelper {
     public void setOnTCPEventListener(OnTCPEventListener listener) {
         eventListener = listener;
     }
-    public void setOnTCPReceiveListener(OnTCPReceiveListener listener) {
+    public void setOnReceiveListener(OnReceivedListener listener) {
         mListener = listener;
     }
 
@@ -145,7 +166,7 @@ public class TCPHelper {
             super.handleMessage(msg);
             switch (msg.what) {
                 case HANDLE_RECV_MSG:
-                    if (mListener != null) mListener.onReceived(receivedMsg);
+                    if (mListener != null) mListener.onReceived(TCPHelper.this, receivedMsg);
                     break;
                 case HANDLE_OPEN_SUCCESS:
                     if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_OPEN_SUCCESS);
@@ -191,7 +212,7 @@ public class TCPHelper {
                         }
                     } catch (SocketTimeoutException e) {
                         //超时，继续接受
-                        //Log.d(TAG, "receiveThread: timeout!");
+                        Log.d(TAG, "receiveThread: is waiting...!");
                     } catch (Exception e) {
                         //异常，可能是网络中断了
                         Log.e(TAG, "receiveThread error.e=" + e.toString());
@@ -211,7 +232,7 @@ public class TCPHelper {
         isStartRecv = false;
         try {
             if (receiveThread != null && receiveThread.isAlive()) {
-                receiveThread.join();
+                receiveThread.join(2000);
                 receiveThread = null;
             }
         } catch (Exception e) {
@@ -281,8 +302,8 @@ public class TCPHelper {
         return ipAddress;
     }
 
-    public interface OnTCPReceiveListener {
-        void onReceived(String data);
+    public interface OnReceivedListener {
+        void onReceived(TCPHelper tcpHelper, String data);
     }
 
     public enum TCP_EVENT{
