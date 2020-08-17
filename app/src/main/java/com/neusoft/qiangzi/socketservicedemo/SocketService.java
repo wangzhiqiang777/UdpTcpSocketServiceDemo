@@ -53,10 +53,7 @@ public class SocketService extends Service {
             @Override
             public void setLocalPort(int Port) throws RemoteException {
                 udpHelper.setLocalPort(Port);
-                udpHelper.stopReceiveData();
-                udpHelper.closeSocket();
-                udpHelper.openSocket();
-                udpHelper.startReceiveData();
+                udpHelper.restartReceiveData();
             }
 
             @Override

@@ -19,73 +19,83 @@ public class UDPHelper {
     private DatagramSocket mSocket;
     private OnUDPReceiveListener Listener;
     private Thread receiveThread;
-    private InetAddress iaRemoteIP =null;
+    private InetAddress iaRemoteIP = null;
     private boolean isOpened = false;
     private boolean isStartRecv = false;
     public String ReceivedMsg;
 
-    public UDPHelper(){}
-    public void setLocalPort(int Port){
-        this.LocalPort = Port;
-        Log.d(TAG, "setLocalPort: port="+Port);
+    public UDPHelper() {
     }
+
+    public void setLocalPort(int Port) {
+        this.LocalPort = Port;
+        Log.d(TAG, "setLocalPort: port=" + Port);
+    }
+
     public int getLocalPortPort() {
         return LocalPort;
     }
-    public boolean setRemoteIP(String ip){
-        if(isIP(ip)) {
+
+    public boolean setRemoteIP(String ip) {
+        if (isIP(ip)) {
             RemoteIP = ip;
-            Log.d(TAG, "setRemoteIP: ip="+ip);
+            Log.d(TAG, "setRemoteIP: ip=" + ip);
             return true;
-        }else return false;
+        } else return false;
     }
-    public void setRemotePort(int port){
+
+    public void setRemotePort(int port) {
         RemotePort = port;
-        Log.d(TAG, "setRemotePort: port="+port);
+        Log.d(TAG, "setRemotePort: port=" + port);
     }
+
     public int getRemotePort() {
         return RemotePort;
     }
-    public boolean isOpen(){return isOpened;}
 
-    public void openSocket(){
+    public boolean isOpen() {
+        return isOpened;
+    }
+
+    public void openSocket() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if(isOpened){
+                    if (isOpened) {
                         return;
                     }
                     mSocket = new DatagramSocket(LocalPort);
                     mSocket.setSoTimeout(1000);//timeout for read
                     isOpened = true;
-                }catch (Exception e){
-                    mSocket =null;
+                } catch (Exception e) {
+                    mSocket = null;
                     isOpened = false;
-                    Log.e(TAG,"openSocket error.e="+e.toString());
+                    Log.e(TAG, "openSocket error.e=" + e.toString());
                 }
             }
         }).start();
 
     }
-    public void send(final String data){
+
+    public void send(final String data) {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
 //                    mSocket = new DatagramSocket();
 //                    mSocket.connect(InetAddress.getByName(RemoteIP), RemotePort);
-                    if(mSocket ==null || mSocket.isClosed()){
+                    if (mSocket == null || mSocket.isClosed()) {
                         Log.e(TAG, "run: socket is inavilable");
                         return;
                     }
 
-                    Log.d(TAG, "send:"+data);
-                    byte[]datas = data.getBytes();
+                    Log.d(TAG, "send:" + data);
+                    byte[] datas = data.getBytes();
                     final DatagramPacket packet = new DatagramPacket(datas, datas.length, InetAddress.getByName(RemoteIP), RemotePort);
                     mSocket.send(packet);
-                }catch (Exception e){
-                    Log.e(TAG,"send error.e="+e.toString());
+                } catch (Exception e) {
+                    Log.e(TAG, "send error.e=" + e.toString());
                     return;
                 }
             }
@@ -93,11 +103,12 @@ public class UDPHelper {
         t.start();
     }
 
-    public void setOnUDPReceiveListener(OnUDPReceiveListener listener){
+    public void setOnUDPReceiveListener(OnUDPReceiveListener listener) {
         Listener = listener;
     }
-    public String getRemoteIP(){
-        if(iaRemoteIP ==null)return "";
+
+    public String getRemoteIP() {
+        if (iaRemoteIP == null) return "";
         return iaRemoteIP.getHostAddress();
     }
 
@@ -106,45 +117,54 @@ public class UDPHelper {
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
             if (msg.what == 100) {
-                if(Listener !=null) Listener.onReceived(ReceivedMsg);
+                if (Listener != null) Listener.onReceived(ReceivedMsg);
             }
         }
     };
 
-    public void startReceiveData(){
+    public void startReceiveData() {
         receiveThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if(mSocket ==null)return;
-                    Log.d(TAG,"startReceiveData ok.");
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (mSocket == null || mSocket.isClosed()) {
+                    Log.e(TAG, "run: socket is inavilable");
+                    return;
+                }
+                Log.d(TAG, "startReceiveData ok.");
 
-                    isStartRecv = true;
-                    byte[]datas = new byte[512];
-                    //DatagramPacket packet = new DatagramPacket(datas, datas.length, null, LocalPort);
-                    DatagramPacket packet = new DatagramPacket(datas, datas.length);
+                isStartRecv = true;
+                byte[] datas = new byte[512];
+                //DatagramPacket packet = new DatagramPacket(datas, datas.length, null, LocalPort);
+                DatagramPacket packet = new DatagramPacket(datas, datas.length);
 
-                    while (isStartRecv){
+                while (isStartRecv) {
+                    try {
                         mSocket.receive(packet);
                         iaRemoteIP = packet.getAddress();
                         ReceivedMsg = new String(packet.getData()).trim();
                         mHandler.sendEmptyMessage(100);
                         java.util.Arrays.fill(datas, (byte) 0);
-                        Log.d(TAG, "recv:("+ iaRemoteIP.getHostAddress()+")"+ ReceivedMsg);
+                        Log.d(TAG, "recv:(" + iaRemoteIP.getHostAddress() + ")" + ReceivedMsg);
+                    } catch (SocketTimeoutException e) {
+                        //超时，继续接受
+                        Log.d(TAG, "receiveThread: timeout!");
+                    } catch (Exception e) {
+                        Log.e(TAG, "startReceiveData error.e=" + e.toString());
                     }
-                    isStartRecv = false;
-                    Log.d(TAG, "receiveThread: end!");
-                } catch (SocketTimeoutException e) {
-                    //超时，继续接受
-                    //Log.d(TAG, "receiveThread: timeout!");
-                } catch (Exception e){
-                    Log.e(TAG,"startReceiveData error.e="+e.toString());
                 }
+                isStartRecv = false;
+                Log.d(TAG, "receiveThread: end!");
             }
         });
         receiveThread.start();
     }
-    public void stopReceiveData(){
+
+    public void stopReceiveData() {
         if (!isStartRecv) return;
         isStartRecv = false;
         try {
@@ -156,32 +176,56 @@ public class UDPHelper {
             Log.e(TAG, "stopReceiveData error.e=" + e.toString());
         }
     }
-    public void closeSocket(){
-        //stopReceiveData();
 
+    public void closeSocket() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if(mSocket !=null && !mSocket.isClosed()){
+                    if(isStartRecv){
+                        stopReceiveData();
+                    }
+                    if (mSocket != null && !mSocket.isClosed()) {
                         mSocket.close();
-                        mSocket =null;
-                        receiveThread =null;
+                        mSocket = null;
                     }
                     isOpened = false;
                     Log.d(TAG, "closeSocket: ok");
-                }catch (Exception e){
-                    Log.e(TAG,"closeSocket error.e="+e.toString());
+                } catch (Exception e) {
+                    Log.e(TAG, "closeSocket error.e=" + e.toString());
                 }
             }
         }).start();
     }
 
+    public void restartReceiveData(){
+        new Thread(){
+            @Override
+            public void run() {
+                if (isStartRecv) {
+                    isStartRecv = false;
+                    try {
+                        if (receiveThread != null && receiveThread.isAlive()) {
+                            receiveThread.join();
+                            receiveThread = null;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "stopReceiveData error.e=" + e.toString());
+                    }
+                }
+                if (isOpened && mSocket != null && !mSocket.isClosed()) {
+                    mSocket.close();
+                    mSocket = null;
+                    isOpened = false;
+                }
+                openSocket();
+                startReceiveData();
+            }
+        }.start();
+    }
 
-    public static boolean isIP(String addr)
-    {
-        if(addr.length() < 7 || addr.length() > 15 || "".equals(addr))
-        {
+    public static boolean isIP(String addr) {
+        if (addr.length() < 7 || addr.length() > 15 || "".equals(addr)) {
             return false;
         }
         /**
@@ -196,29 +240,30 @@ public class UDPHelper {
         boolean ipAddress = mat.find();
 
         //============对之前的ip判断的bug在进行判断
-        if (ipAddress==true){
+        if (ipAddress == true) {
             String ips[] = addr.split("\\.");
 
-            if(ips.length==4){
-                try{
-                    for(String ip : ips){
-                        if(Integer.parseInt(ip)<0|| Integer.parseInt(ip)>255){
+            if (ips.length == 4) {
+                try {
+                    for (String ip : ips) {
+                        if (Integer.parseInt(ip) < 0 || Integer.parseInt(ip) > 255) {
                             return false;
                         }
 
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     return false;
                 }
 
                 return true;
-            }else{
+            } else {
                 return false;
             }
         }
 
         return ipAddress;
     }
+
     public interface OnUDPReceiveListener {
         void onReceived(String data);
     }
