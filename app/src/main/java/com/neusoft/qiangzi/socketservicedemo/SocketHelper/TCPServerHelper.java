@@ -52,10 +52,10 @@ public class TCPServerHelper {
                         Socket socket = mServerSocket.accept();
                         TCPHelper tcpHelper = new TCPHelper(socket);
                         acceptSocketList.add(tcpHelper);
-                        tcpHelper.startReceiveData();
+//                        tcpHelper.startReceiveData();
                         if(onAcceptListener!=null) onAcceptListener.onAccepted(tcpHelper);
-                        Log.d(TAG, "listenThread: accept new client: ip="
-                                +tcpHelper.getRemoteIP()+",port="+tcpHelper.getRemotePort());
+                        Log.d(TAG, "listenThread: accept new client: remote addr="
+                                +socket.getInetAddress().getHostAddress());
                     } catch (SocketTimeoutException e) {
                         Log.d(TAG, "listenThread: is waiting connect...");
                     } catch (IOException e) {
@@ -80,7 +80,7 @@ public class TCPServerHelper {
         }
     }
 
-    void dropClient(TCPHelper tcpClient){
+    public void dropClient(TCPHelper tcpClient){
         if(tcpClient.isOpen()){
             if(acceptSocketList.contains(tcpClient)){
                 acceptSocketList.remove(tcpClient);

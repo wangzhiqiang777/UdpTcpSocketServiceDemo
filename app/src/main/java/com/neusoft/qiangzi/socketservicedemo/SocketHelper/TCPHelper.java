@@ -1,6 +1,7 @@
 package com.neusoft.qiangzi.socketservicedemo.SocketHelper;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
@@ -37,7 +38,7 @@ public class TCPHelper {
     public TCPHelper(Socket socket) {
         if(socket != null && socket.isConnected()){
             mSocket = socket;
-            remoteIP = mSocket.getRemoteSocketAddress().toString();
+            remoteIP = mSocket.getInetAddress().getHostAddress();
             Log.d(TAG, "TCPHelper: remoteIP="+remoteIP);
             remotePort = mSocket.getPort();
             Log.d(TAG, "TCPHelper: remotePort="+remotePort);
@@ -111,7 +112,7 @@ public class TCPHelper {
                     inputStream = mSocket.getInputStream();
                     isOpened = true;
                     mHandler.sendEmptyMessage(HANDLE_OPEN_SUCCESS);
-                    Log.d(TAG, "openSocket OK!");
+                    Log.d(TAG, "openSocket OK! remoteIP="+mSocket.getRemoteSocketAddress().toString());
                 } catch (SocketTimeoutException e) {
                     Log.e(TAG, "openSocket timeout!");
                     mHandler.sendEmptyMessage(HANDLE_OPEN_TIMEOUT);
@@ -160,7 +161,7 @@ public class TCPHelper {
     private final int HANDLE_RECV_ERROR= 105;
     private final int HANDLE_BREAK_OFF= 106;
 
-    private Handler mHandler = new Handler() {
+    private Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
@@ -169,22 +170,22 @@ public class TCPHelper {
                     if (mListener != null) mListener.onReceived(TCPHelper.this, receivedMsg);
                     break;
                 case HANDLE_OPEN_SUCCESS:
-                    if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_OPEN_SUCCESS);
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_OPEN_SUCCESS);
                     break;
                 case HANDLE_OPEN_TIMEOUT:
-                    if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_OPEN_TIMEOUT);
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_OPEN_TIMEOUT);
                     break;
                 case HANDLE_OPEN_FAILED:
-                    if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_OPEN_FAILED);
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_OPEN_FAILED);
                     break;
                 case HANDLE_SEND_ERROR:
-                    if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_SEND_ERROR);
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_SEND_ERROR);
                     break;
                 case HANDLE_RECV_ERROR:
-                    if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_RECV_ERROR);
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_RECV_ERROR);
                     break;
                 case HANDLE_BREAK_OFF:
-                    if (eventListener != null) eventListener.onTcpEvent(TCP_EVENT.TCP_BREAK_OFF);
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_BREAK_OFF);
                     break;
             }
         }
@@ -315,6 +316,6 @@ public class TCPHelper {
         TCP_BREAK_OFF
     }
     public interface OnTCPEventListener {
-        void onTcpEvent(TCP_EVENT e);
+        void onTcpEvent(TCPHelper tcpHelper, TCP_EVENT e);
     }
 }

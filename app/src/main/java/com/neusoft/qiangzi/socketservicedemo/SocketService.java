@@ -56,9 +56,11 @@ public class SocketService extends Service {
                         Log.d(TAG, "setSocketType: UDP is already running...");
                     }
                 }else {
-                    udpHelper.stopReceiveData();
-                    udpHelper.closeSocket();
-                    udpHelper = null;
+                    if(udpHelper!=null){
+                        udpHelper.stopReceiveData();
+                        udpHelper.closeSocket();
+                        udpHelper = null;
+                    }
                 }
             }
 
@@ -76,10 +78,10 @@ public class SocketService extends Service {
                         });
                         tcpHelper.setOnTCPEventListener(new TCPHelper.OnTCPEventListener() {
                             @Override
-                            public void onTcpEvent(TCPHelper.TCP_EVENT e) {
+                            public void onTcpEvent(TCPHelper helper, TCPHelper.TCP_EVENT e) {
                                 switch (e){
                                     case TCP_OPEN_SUCCESS:
-                                        tcpHelper.startReceiveData();
+                                        if(tcpHelper!=null)tcpHelper.startReceiveData();
                                         break;
                                     case TCP_OPEN_FAILED:
                                         break;
@@ -90,6 +92,12 @@ public class SocketService extends Service {
                                     case TCP_RECV_ERROR:
                                         break;
                                     case TCP_BREAK_OFF:
+                                        Log.d(TAG, "onTcpEvent: detect disconnect.");
+                                        if(tcpHelper!=null){
+                                            tcpHelper.stopReceiveData();
+                                            tcpHelper.closeSocket();
+                                            tcpHelper = null;
+                                        }
                                         break;
                                 }
                             }
@@ -101,9 +109,11 @@ public class SocketService extends Service {
                         Log.d(TAG, "setSocketType: UDP is already running...");
                     }
                 }else {
-                    tcpHelper.stopReceiveData();
-                    tcpHelper.closeSocket();
-                    tcpHelper = null;
+                    if(tcpHelper!=null) {
+                        tcpHelper.stopReceiveData();
+                        tcpHelper.closeSocket();
+                        tcpHelper = null;
+                    }
                 }
             }
 
@@ -122,6 +132,30 @@ public class SocketService extends Service {
                                         broadcastReceivedData(data);
                                     }
                                 });
+                                tcpClient.setOnTCPEventListener(new TCPHelper.OnTCPEventListener() {
+                                    @Override
+                                    public void onTcpEvent(TCPHelper tcpHelper, TCPHelper.TCP_EVENT e) {
+                                        switch (e){
+                                            case TCP_OPEN_SUCCESS:
+                                                break;
+                                            case TCP_OPEN_FAILED:
+                                                break;
+                                            case TCP_OPEN_TIMEOUT:
+                                                break;
+                                            case TCP_SEND_ERROR:
+                                                break;
+                                            case TCP_RECV_ERROR:
+                                                break;
+                                            case TCP_BREAK_OFF:
+                                                Log.d(TAG, "onTcpEvent: detect disconnect.");
+                                                tcpHelper.stopReceiveData();
+                                                tcpHelper.closeSocket();
+                                                if(tcpServerHelper!=null)tcpServerHelper.dropClient(tcpHelper);
+                                                break;
+                                        }
+                                    }
+                                });
+                                tcpClient.startReceiveData();
                             }
                         });
                         tcpServerHelper.listenStart();
@@ -130,9 +164,11 @@ public class SocketService extends Service {
                         Log.d(TAG, "setTCPServerEnabled: TCP Server is already running...");
                     }
                 }else {
-                    tcpServerHelper.dropAllClient();
-                    tcpServerHelper.listenStop();
-                    tcpServerHelper = null;
+                    if(tcpServerHelper!=null){
+                        tcpServerHelper.dropAllClient();
+                        tcpServerHelper.listenStop();
+                        tcpServerHelper = null;
+                    }
                 }
             }
 
