@@ -16,6 +16,7 @@ public class TCPServerHelper {
     private List<TCPHelper> acceptSocketList = new ArrayList<>();
     private OnAcceptListener onAcceptListener = null;
     private Thread listenThread = null;
+
     private boolean isListenStart = false;
 
 
@@ -32,6 +33,10 @@ public class TCPServerHelper {
 
     public int getLocalPortPort() {
         return localPort;
+    }
+
+    public boolean isListenStart() {
+        return isListenStart;
     }
 
     public void listenStart() {
@@ -61,6 +66,11 @@ public class TCPServerHelper {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                }
+                try {
+                    mServerSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
                 Log.d(TAG, "listenThread: End!");
             }

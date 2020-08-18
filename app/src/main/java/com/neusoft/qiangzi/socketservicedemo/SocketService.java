@@ -1,7 +1,13 @@
 package com.neusoft.qiangzi.socketservicedemo;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
@@ -11,7 +17,10 @@ import com.neusoft.qiangzi.socketservicedemo.SocketHelper.TCPHelper;
 import com.neusoft.qiangzi.socketservicedemo.SocketHelper.TCPServerHelper;
 import com.neusoft.qiangzi.socketservicedemo.SocketHelper.UDPHelper;
 
+import androidx.core.app.NotificationCompat;
+
 public class SocketService extends Service {
+    public static final String SERVICE_NAME = "com.neusoft.qiangzi.socketservicedemo.SocketService";
     private static final String TAG = "SocketService";
     private int localPort = 6000;
     private int remotePort = 6000;
@@ -29,6 +38,30 @@ public class SocketService extends Service {
         super.onCreate();
         Log.d(TAG, "onCreate: is called.");
 
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand: is called");
+        NotificationChannel notificationChannel = null;
+        String CHANNEL_ID = getClass().getPackage().toString();
+        String CHANNEL_NAME = "Socket Servier";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationChannel = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
+            NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            notificationManager.createNotificationChannel(notificationChannel);
+        }
+        Notification notification = new NotificationCompat.Builder(getApplicationContext(),CHANNEL_ID)
+                .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0))
+                .setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.mipmap.ic_launcher))
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("网络服务")
+                .setContentText("网络服务运行中。。。")
+                .setWhen(System.currentTimeMillis())
+                .build();
+        startForeground(1,notification);
+
+        return START_STICKY;
     }
 
     @Override
@@ -306,9 +339,21 @@ public class SocketService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        Log.d(TAG, "onDestroy: is called.");
         if(udpHelper != null && udpHelper.isOpen()){
+            udpHelper.stopReceiveData();
             udpHelper.closeSocket();
             udpHelper = null;
+        }
+        if(tcpHelper!=null && tcpHelper.isOpen()){
+            tcpHelper.stopReceiveData();
+            tcpHelper.closeSocket();
+            tcpHelper = null;
+        }
+        if(tcpServerHelper!=null && tcpServerHelper.isListenStart()){
+            tcpServerHelper.dropAllClient();
+            tcpServerHelper.listenStop();
+            tcpServerHelper = null;
         }
     }
 }

@@ -168,4 +168,16 @@
         app:layout_constraintStart_toEndOf="@+id/switchTcp"
         app:layout_constraintTop_toTopOf="@+id/switchTcp" />
 
+    <ToggleButton
+        android:id="@+id/toggleButtonStartService"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="启动网络服务"
+        android:textOff="网络服务未启动"
+        android:textOn="网络服务运行中"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/switchTcpServer"
+        app:layout_constraintTop_toBottomOf="@+id/switchTcpServer" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
