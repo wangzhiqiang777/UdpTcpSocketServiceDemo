@@ -29,8 +29,17 @@ public class TCPHelper {
     private InetAddress iaRemoteIP = null;
     private boolean isOpened = false;
     private boolean isStartRecv = false;
+    private String receivedMsg;
 
-    public String receivedMsg;
+    private final int HANDLE_RECV_MSG = 100;
+    private final int HANDLE_OPEN_SUCCESS= 101;
+    private final int HANDLE_OPEN_FAILED= 102;
+    private final int HANDLE_OPEN_TIMEOUT= 103;
+    private final int HANDLE_SEND_ERROR= 104;
+    private final int HANDLE_RECV_ERROR= 105;
+    private final int HANDLE_BREAK_OFF= 106;
+    private final int HANDLE_UNKNOWN_ERROR = 107;
+
 
     public TCPHelper() {
     }
@@ -137,6 +146,7 @@ public class TCPHelper {
                     Log.d(TAG, "send:" + data);
                     outputStream.write(data.getBytes());
                 } catch (Exception e) {
+                    mHandler.sendEmptyMessage(HANDLE_SEND_ERROR);
                     Log.e(TAG, "send error.e=" + e.toString());
                     return;
                 }
@@ -151,15 +161,6 @@ public class TCPHelper {
     public void setOnReceiveListener(OnReceivedListener listener) {
         mListener = listener;
     }
-
-
-    private final int HANDLE_RECV_MSG = 100;
-    private final int HANDLE_OPEN_SUCCESS= 101;
-    private final int HANDLE_OPEN_FAILED= 102;
-    private final int HANDLE_OPEN_TIMEOUT= 103;
-    private final int HANDLE_SEND_ERROR= 104;
-    private final int HANDLE_RECV_ERROR= 105;
-    private final int HANDLE_BREAK_OFF= 106;
 
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
@@ -186,6 +187,9 @@ public class TCPHelper {
                     break;
                 case HANDLE_BREAK_OFF:
                     if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_BREAK_OFF);
+                    break;
+                case HANDLE_UNKNOWN_ERROR:
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_UNKNOWN_ERROR);
                     break;
             }
         }
@@ -313,7 +317,8 @@ public class TCPHelper {
         TCP_OPEN_TIMEOUT,
         TCP_SEND_ERROR,
         TCP_RECV_ERROR,
-        TCP_BREAK_OFF
+        TCP_BREAK_OFF,
+        TCP_UNKNOWN_ERROR
     }
     public interface OnTCPEventListener {
         void onTcpEvent(TCPHelper tcpHelper, TCP_EVENT e);

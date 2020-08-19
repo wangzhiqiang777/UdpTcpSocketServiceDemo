@@ -75,16 +75,34 @@ public class SocketService extends Service {
                         udpHelper = new UDPHelper(localPort);
                         udpHelper.setRemoteIP(remoteIP);
                         udpHelper.setRemotePort(remotePort);
-                        udpHelper.setOnUDPReceiveListener(new UDPHelper.OnUDPReceiveListener() {
+                        udpHelper.setOnReceiveListener(new UDPHelper.OnUDPReceiveListener() {
                             @Override
                             public void onReceived(String data) {
                                 Log.d(TAG, "onReceived: data=" + data);
                                 broadcastReceivedData(data);
                             }
                         });
+                        udpHelper.setOnUDPEventListener(new UDPHelper.OnUDPEventListener() {
+                            @Override
+                            public void onUdpEvent(UDPHelper.UDP_EVENT e) {
+                                switch (e){
+                                    case UDP_OPEN_SUCCESS:
+                                        if(udpHelper!=null)udpHelper.startReceiveData();
+                                        break;
+                                    case UDP_OPEN_FAILED:
+                                        break;
+                                    case UDP_SEND_ERROR:
+                                        break;
+                                    case UDP_RECV_ERROR:
+                                        break;
+                                    case UDP_UNKNOWN_ERROR:
+                                        break;
+                                }
+                            }
+                        });
                         udpHelper.openSocket();
-                        udpHelper.startReceiveData();
-                        Log.d(TAG, "setSocketType: UDP init OK.");
+//                        udpHelper.startReceiveData();
+                        Log.d(TAG, "setSocketType: UDP init...");
                     }else {
                         Log.d(TAG, "setSocketType: UDP is already running...");
                     }
@@ -131,6 +149,8 @@ public class SocketService extends Service {
                                             tcpHelper.closeSocket();
                                             tcpHelper = null;
                                         }
+                                        break;
+                                    case TCP_UNKNOWN_ERROR:
                                         break;
                                 }
                             }
@@ -185,10 +205,27 @@ public class SocketService extends Service {
                                                 tcpHelper.closeSocket();
                                                 if(tcpServerHelper!=null)tcpServerHelper.dropClient(tcpHelper);
                                                 break;
+                                            case TCP_UNKNOWN_ERROR:
+                                                break;
                                         }
                                     }
                                 });
                                 tcpClient.startReceiveData();
+                            }
+                        });
+                        tcpServerHelper.setOnEventListener(new TCPServerHelper.OnEventListener() {
+                            @Override
+                            public void onEvent(TCPServerHelper.EVENT e) {
+                                switch (e){
+                                    case OPEN_SUCCESS:
+                                        break;
+                                    case OPEN_FAILED:
+                                        break;
+                                    case ACCEPT_ERROR:
+                                        break;
+                                    case UNKNOWN_ERROR:
+                                        break;
+                                }
                             }
                         });
                         tcpServerHelper.listenStart();
@@ -229,6 +266,7 @@ public class SocketService extends Service {
                 }
                 if(tcpServerHelper!=null){
                     tcpServerHelper.setLocalPort(Port);
+                    tcpServerHelper.listenRestart();
                 }
             }
 

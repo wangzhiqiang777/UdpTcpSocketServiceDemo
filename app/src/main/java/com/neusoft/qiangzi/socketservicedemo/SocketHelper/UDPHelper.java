@@ -1,6 +1,7 @@
 package com.neusoft.qiangzi.socketservicedemo.SocketHelper;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
@@ -17,13 +18,21 @@ public class UDPHelper {
     private int RemotePort = 7001;
     private String RemoteIP = "127.0.0.1";
     private DatagramSocket mSocket;
-    private OnUDPReceiveListener Listener;
+    private OnUDPReceiveListener receiveListener;
     private Thread receiveThread;
     private InetAddress iaRemoteIP = null;
     private boolean isOpened = false;
     private boolean isStartRecv = false;
-    public String ReceivedMsg;
-    public Object apiThreadLock = new Object();
+    private String ReceivedMsg;
+    private Object apiThreadLock = new Object();
+    private OnUDPEventListener eventListener = null;
+
+    private final int HANDLE_RECV_MSG = 100;
+    private final int HANDLE_OPEN_SUCCESS= 101;
+    private final int HANDLE_OPEN_FAILED= 102;
+    private final int HANDLE_SEND_ERROR= 104;
+    private final int HANDLE_RECV_ERROR= 105;
+    private final int HANDLE_UNKNOWN_ERROR= 106;
 
     public UDPHelper() {
     }
@@ -74,9 +83,12 @@ public class UDPHelper {
                         mSocket = new DatagramSocket(LocalPort);
                         mSocket.setSoTimeout(1000);//timeout for read
                         isOpened = true;
+                        mHandler.sendEmptyMessage(HANDLE_OPEN_SUCCESS);
+                        Log.d(TAG, "openSocket: OK.");
                     } catch (Exception e) {
                         mSocket = null;
                         isOpened = false;
+                        mHandler.sendEmptyMessage(HANDLE_OPEN_FAILED);
                         Log.e(TAG, "openSocket error.e=" + e.toString());
                     }
                 }
@@ -93,7 +105,7 @@ public class UDPHelper {
 //                    mSocket = new DatagramSocket();
 //                    mSocket.connect(InetAddress.getByName(RemoteIP), RemotePort);
                     if (mSocket == null || mSocket.isClosed()) {
-                        Log.e(TAG, "run: socket is inavilable");
+                        Log.e(TAG, "send: socket is inavilable");
                         return;
                     }
 
@@ -102,6 +114,7 @@ public class UDPHelper {
                     final DatagramPacket packet = new DatagramPacket(datas, datas.length, InetAddress.getByName(RemoteIP), RemotePort);
                     mSocket.send(packet);
                 } catch (Exception e) {
+                    mHandler.sendEmptyMessage(HANDLE_SEND_ERROR);
                     Log.e(TAG, "send error.e=" + e.toString());
                     return;
                 }
@@ -110,8 +123,11 @@ public class UDPHelper {
         t.start();
     }
 
-    public void setOnUDPReceiveListener(OnUDPReceiveListener listener) {
-        Listener = listener;
+    public void setOnUDPEventListener(OnUDPEventListener listener) {
+        eventListener = listener;
+    }
+    public void setOnReceiveListener(OnUDPReceiveListener listener) {
+        receiveListener = listener;
     }
 
     public String getRemoteIP() {
@@ -119,12 +135,29 @@ public class UDPHelper {
         return iaRemoteIP.getHostAddress();
     }
 
-    private Handler mHandler = new Handler() {
+    private Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            if (msg.what == 100) {
-                if (Listener != null) Listener.onReceived(ReceivedMsg);
+            switch (msg.what) {
+                case HANDLE_RECV_MSG:
+                    if (receiveListener != null) receiveListener.onReceived(ReceivedMsg);
+                    break;
+                case HANDLE_OPEN_SUCCESS:
+                    if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_OPEN_SUCCESS);
+                    break;
+                case HANDLE_OPEN_FAILED:
+                    if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_OPEN_FAILED);
+                    break;
+                case HANDLE_SEND_ERROR:
+                    if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_SEND_ERROR);
+                    break;
+                case HANDLE_RECV_ERROR:
+                    if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_RECV_ERROR);
+                    break;
+                case HANDLE_UNKNOWN_ERROR:
+                    if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_UNKNOWN_ERROR);
+                    break;
             }
         }
     };
@@ -135,16 +168,11 @@ public class UDPHelper {
             @Override
             public void run() {
                 synchronized (apiThreadLock) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
                     if (mSocket == null || mSocket.isClosed()) {
-                        Log.e(TAG, "run: socket is inavilable");
+                        Log.e(TAG, "receiveThread: socket is inavilable");
                         return;
                     }
-                    Log.d(TAG, "startReceiveData ok.");
+                    Log.d(TAG, "receiveThread: start ok.");
 
                     isStartRecv = true;
                     byte[] datas = new byte[512];
@@ -156,13 +184,14 @@ public class UDPHelper {
                             mSocket.receive(packet);
                             iaRemoteIP = packet.getAddress();
                             ReceivedMsg = new String(packet.getData()).trim();
-                            mHandler.sendEmptyMessage(100);
+                            mHandler.sendEmptyMessage(HANDLE_RECV_MSG);
                             java.util.Arrays.fill(datas, (byte) 0);
                             Log.d(TAG, "recv:(" + iaRemoteIP.getHostAddress() + ")" + ReceivedMsg);
                         } catch (SocketTimeoutException e) {
                             //超时，继续接受
                             Log.d(TAG, "receiveThread: is waiting...");
                         } catch (Exception e) {
+                            mHandler.sendEmptyMessage(HANDLE_RECV_ERROR);
                             Log.e(TAG, "startReceiveData error.e=" + e.toString());
                         }
                     }
@@ -183,6 +212,7 @@ public class UDPHelper {
                 receiveThread = null;
             }
         } catch (Exception e) {
+            mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
             Log.e(TAG, "stopReceiveData error.e=" + e.toString());
         }
     }
@@ -203,6 +233,7 @@ public class UDPHelper {
                         isOpened = false;
                         Log.d(TAG, "closeSocket: ok");
                     } catch (Exception e) {
+                        mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
                         Log.e(TAG, "closeSocket error.e=" + e.toString());
                     }
                 }
@@ -224,6 +255,7 @@ public class UDPHelper {
                                 receiveThread = null;
                             }
                         } catch (Exception e) {
+                            mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
                             Log.e(TAG, "stopReceiveData error.e=" + e.toString());
                         }
                     }
@@ -278,5 +310,14 @@ public class UDPHelper {
     public interface OnUDPReceiveListener {
         void onReceived(String data);
     }
-
+    public enum UDP_EVENT{
+        UDP_OPEN_SUCCESS,
+        UDP_OPEN_FAILED,
+        UDP_SEND_ERROR,
+        UDP_RECV_ERROR,
+        UDP_UNKNOWN_ERROR
+    }
+    public interface OnUDPEventListener {
+        void onUdpEvent(UDPHelper.UDP_EVENT e);
+    }
 }

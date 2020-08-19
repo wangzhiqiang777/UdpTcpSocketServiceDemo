@@ -1,5 +1,8 @@
 package com.neusoft.qiangzi.socketservicedemo.SocketHelper;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 
 import java.io.IOException;
@@ -16,9 +19,13 @@ public class TCPServerHelper {
     private List<TCPHelper> acceptSocketList = new ArrayList<>();
     private OnAcceptListener onAcceptListener = null;
     private Thread listenThread = null;
-
     private boolean isListenStart = false;
+    private OnEventListener eventListener = null;
 
+    private final int HANDLE_OPEN_SUCCESS= 101;
+    private final int HANDLE_OPEN_FAILED= 102;
+    private final int HANDLE_ACCEPT_ERROR= 104;
+    private final int HANDLE_UNKNOWN_ERROR= 105;
 
     public TCPServerHelper() {
     }
@@ -49,9 +56,13 @@ public class TCPServerHelper {
                     mServerSocket = new ServerSocket(localPort);
                     mServerSocket.setSoTimeout(1000);
                 } catch (IOException e) {
+                    mHandler.sendEmptyMessage(HANDLE_OPEN_FAILED);
                     e.printStackTrace();
+                    return;
                 }
+                mHandler.sendEmptyMessage(HANDLE_OPEN_SUCCESS);
                 isListenStart = true;
+                Log.d(TAG, "listenThread: open success!");
                 while (isListenStart) {
                     try {
                         Socket socket = mServerSocket.accept();
@@ -64,12 +75,14 @@ public class TCPServerHelper {
                     } catch (SocketTimeoutException e) {
                         Log.d(TAG, "listenThread: is waiting connect...");
                     } catch (IOException e) {
+                        mHandler.sendEmptyMessage(HANDLE_ACCEPT_ERROR);
                         e.printStackTrace();
                     }
                 }
                 try {
                     mServerSocket.close();
                 } catch (IOException e) {
+                    mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
                     e.printStackTrace();
                 }
                 Log.d(TAG, "listenThread: End!");
@@ -85,10 +98,43 @@ public class TCPServerHelper {
             try {
                 listenThread.join(2000);
             } catch (InterruptedException e) {
+                mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
                 e.printStackTrace();
             }
         }
     }
+
+    public void listenRestart(){
+        new Thread(){
+            @Override
+            public void run() {
+                dropAllClient();
+                listenStop();
+                listenStart();
+            }
+        }.start();
+    }
+
+    private Handler mHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case HANDLE_OPEN_SUCCESS:
+                    if (eventListener != null) eventListener.onEvent(EVENT.OPEN_SUCCESS);
+                    break;
+                case HANDLE_OPEN_FAILED:
+                    if (eventListener != null) eventListener.onEvent(EVENT.OPEN_FAILED);
+                    break;
+                case HANDLE_ACCEPT_ERROR:
+                    if (eventListener != null) eventListener.onEvent(EVENT.ACCEPT_ERROR);
+                    break;
+                case HANDLE_UNKNOWN_ERROR:
+                    if (eventListener != null) eventListener.onEvent(EVENT.UNKNOWN_ERROR);
+                    break;
+            }
+        }
+    };
 
     public void dropClient(TCPHelper tcpClient){
         if(tcpClient.isOpen()){
@@ -138,10 +184,20 @@ public class TCPServerHelper {
     public void setOnAcceptListener(OnAcceptListener listener) {
         onAcceptListener = listener;
     }
-
+    public void setOnEventListener(OnEventListener listener) {
+        eventListener = listener;
+    }
     public interface OnAcceptListener {
         void onAccepted(TCPHelper tcpClient);
     }
-
+    public enum EVENT{
+        OPEN_SUCCESS,
+        OPEN_FAILED,
+        ACCEPT_ERROR,
+        UNKNOWN_ERROR,
+    }
+    public interface OnEventListener {
+        void onEvent(EVENT e);
+    }
 
 }

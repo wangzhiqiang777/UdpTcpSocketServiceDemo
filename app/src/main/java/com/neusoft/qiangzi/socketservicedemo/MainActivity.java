@@ -94,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         etRemotePort.setInputType(InputType.TYPE_NULL);
         etLocalPort.setInputType(InputType.TYPE_NULL);
         etRecieveText.setInputType(InputType.TYPE_NULL);
+        etRecieveText.setSingleLine(false);
 
         etRemoteIP.setOnClickListener(this);
         etRemotePort.setOnClickListener(this);
