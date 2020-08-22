@@ -43,19 +43,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            Log.d(TAG, "onServiceConnected: is called.");
             socketBinder = (ISocketBinder) iBinder;
+            if(socketBinder==null){
+                Toast.makeText(MainActivity.this,"服务连接失败！",Toast.LENGTH_SHORT).show();
+                return;
+            }
             //初始化设置参数
             try {
                 socketBinder.registerListener(receivedListener);
-                socketBinder.setRemoteIP(etRemoteIP.getText().toString());
-                socketBinder.setRemotePort(Integer.parseInt(etRemotePort.getText().toString()));
-                socketBinder.setLocalPort(Integer.parseInt(etLocalPort.getText().toString()));
-
                 //恢复状态
                 swUdp.setChecked(socketBinder.isUDPEnabled());
                 swTcp.setChecked(socketBinder.isTCPEnabled());
                 swTcpServer.setChecked(socketBinder.isTCPServerEnabled());
-
+                etLocalPort.setText(String.valueOf(socketBinder.getLocalPortPort()));
+                etRemoteIP.setText(socketBinder.getRemoteIP());
+                etRemotePort.setText(String.valueOf(socketBinder.getRemotePort()));
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -101,16 +104,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         etLocalPort.setOnClickListener(this);
         btnSend.setOnClickListener(this);
         btnClearReceive.setOnClickListener(this);
-        if(isServiceRunning(SocketService.SERVICE_NAME)){
-            btStartService.setChecked(true);
-            Intent i = new Intent(this, SocketService.class);
-            bindService(i, connection, BIND_AUTO_CREATE);
-        }
 
         swUdp.setOnCheckedChangeListener(this);
         swTcp.setOnCheckedChangeListener(this);
         swTcpServer.setOnCheckedChangeListener(this);
         btStartService.setOnCheckedChangeListener(this);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(isServiceRunning(ISocketBinder.SERVICE_NAME)){
+            btStartService.setChecked(true);
+            Intent i = new Intent(this, SocketService.class);
+            bindService(i, connection, BIND_AUTO_CREATE);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(socketBinder!=null) {
+            try {
+                socketBinder.unregisterListener(receivedListener);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            unbindService(connection);
+            socketBinder = null;
+        }
     }
 
     @Override
@@ -132,6 +154,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
+                }else {
+                    Toast.makeText(this,"请开启服务！",Toast.LENGTH_SHORT).show();
                 }
                 break;
             case R.id.buttonClearReceive:
@@ -140,20 +164,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//        Intent i = new Intent(this, SocketService.class);
-//        bindService(i, connection, BIND_AUTO_CREATE);
-//
-//    }
-//
-//    @Override
-//    protected void onStop() {
-//        super.onStop();
-//        unbindService(connection);
-//        socketBinder = null;
-//    }
 
     private void inputTitleDialog(final int viewId, String currentText) {
 
@@ -201,6 +211,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+        if(!compoundButton.isPressed())return;
+        if(compoundButton.getId()!=R.id.toggleButtonStartService && socketBinder==null){
+            Toast.makeText(this,"请开启服务！",Toast.LENGTH_SHORT).show();
+            compoundButton.setChecked(false);
+            return;
+        }
         switch (compoundButton.getId()){
             case R.id.switchUdp:
                 try {
@@ -226,12 +242,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.toggleButtonStartService:
                 Intent i = new Intent(this, SocketService.class);
                 if(b){
-                    startForegroundService(i);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(i);
+                    }else {
+                        startService(i);
+                    }
                     bindService(i, connection, BIND_AUTO_CREATE);
                 }else {
-                    if(connection!=null) unbindService(connection);
+                    if(socketBinder!=null) {
+                        try {
+                            socketBinder.unregisterListener(receivedListener);
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                        unbindService(connection);
+                    }
                     stopService(i);
-                    connection = null;
+                    socketBinder = null;
+                    swUdp.setChecked(false);
+                    swTcp.setChecked(false);
+                    swTcpServer.setChecked(false);
                 }
                 break;
         }

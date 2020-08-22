@@ -11,6 +11,9 @@ interface ISocketBinder {
      */
 //    void basicTypes(int anInt, long aLong, boolean aBoolean, float aFloat,
 //            double aDouble, String aString);
+
+    const String SERVICE_NAME = "com.neusoft.qiangzi.socketservicedemo.SocketService";
+
     void setUDPEnabled(boolean enabled);
     void setTCPEnabled(boolean enabled);
     void setTCPServerEnabled(boolean enabled);

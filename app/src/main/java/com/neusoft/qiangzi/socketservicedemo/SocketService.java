@@ -24,7 +24,7 @@ public class SocketService extends Service {
     private static final String TAG = "SocketService";
     private int localPort = 6000;
     private int remotePort = 6000;
-    private String remoteIP = "127.0.0.1";
+    private String remoteIP = "10.0.2.2";
     private UDPHelper udpHelper = null;
     private TCPHelper tcpHelper = null;
     private TCPServerHelper tcpServerHelper = null;
@@ -360,6 +360,7 @@ public class SocketService extends Service {
     private void broadcastReceivedData(String data) {
         synchronized (mListenerList) {
             int n = mListenerList.beginBroadcast();
+            Log.d(TAG, "broadcastReceivedData: begin n="+n);
             try {
                 for (int i = 0; i < n; i++) {
                     IOnSocketReceivedListener listener = mListenerList.getBroadcastItem(i);
@@ -368,9 +369,11 @@ public class SocketService extends Service {
                     }
                 }
             } catch (RemoteException e) {
+                Log.e(TAG, "broadcastReceivedData: error!");
                 e.printStackTrace();
             }
             mListenerList.finishBroadcast();
+            Log.d(TAG, "broadcastReceivedData: end");
         }
     }
 
