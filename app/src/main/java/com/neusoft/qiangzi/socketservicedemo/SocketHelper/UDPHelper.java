@@ -29,6 +29,7 @@ public class UDPHelper {
 
     private final int HANDLE_RECV_MSG = 100;
     private final int HANDLE_OPEN_SUCCESS= 101;
+    private final int HANDLE_CLOSE_SUCCESS= 111;
     private final int HANDLE_OPEN_FAILED= 102;
     private final int HANDLE_SEND_ERROR= 104;
     private final int HANDLE_RECV_ERROR= 105;
@@ -146,6 +147,9 @@ public class UDPHelper {
                 case HANDLE_OPEN_SUCCESS:
                     if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_OPEN_SUCCESS);
                     break;
+                case HANDLE_CLOSE_SUCCESS:
+                    if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_CLOSE_SUCCESS);
+                    break;
                 case HANDLE_OPEN_FAILED:
                     if (eventListener != null) eventListener.onUdpEvent(UDP_EVENT.UDP_OPEN_FAILED);
                     break;
@@ -204,6 +208,9 @@ public class UDPHelper {
     }
 
     public synchronized void stopReceiveData() {
+        isStartRecv = false;
+    }
+    public synchronized void stopReceiveDataSync() {
         if (!isStartRecv) return;
         isStartRecv = false;
         try {
@@ -216,7 +223,6 @@ public class UDPHelper {
             Log.e(TAG, "stopReceiveData error.e=" + e.toString());
         }
     }
-
     public void closeSocket() {
         new Thread(new Runnable() {
             @Override
@@ -224,13 +230,14 @@ public class UDPHelper {
                 synchronized (apiThreadLock) {
                     try {
                         if (isStartRecv) {
-                            stopReceiveData();
+                            stopReceiveDataSync();
                         }
                         if (mSocket != null && !mSocket.isClosed()) {
                             mSocket.close();
                             mSocket = null;
                         }
                         isOpened = false;
+                        mHandler.sendEmptyMessage(HANDLE_CLOSE_SUCCESS);
                         Log.d(TAG, "closeSocket: ok");
                     } catch (Exception e) {
                         mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
@@ -312,6 +319,7 @@ public class UDPHelper {
     }
     public enum UDP_EVENT{
         UDP_OPEN_SUCCESS,
+        UDP_CLOSE_SUCCESS,
         UDP_OPEN_FAILED,
         UDP_SEND_ERROR,
         UDP_RECV_ERROR,

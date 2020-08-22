@@ -33,6 +33,7 @@ public class TCPHelper {
 
     private final int HANDLE_RECV_MSG = 100;
     private final int HANDLE_OPEN_SUCCESS= 101;
+    private final int HANDLE_CLOSE_SUCCESS= 111;
     private final int HANDLE_OPEN_FAILED= 102;
     private final int HANDLE_OPEN_TIMEOUT= 103;
     private final int HANDLE_SEND_ERROR= 104;
@@ -59,11 +60,13 @@ public class TCPHelper {
                 outputStream = mSocket.getOutputStream();
                 inputStream = mSocket.getInputStream();
                 isOpened = true;
+                mHandler.sendEmptyMessage(HANDLE_OPEN_SUCCESS);
                 Log.d(TAG, "TCPHelper: Create OK!");
             } catch (Exception e) {
                 e.printStackTrace();
                 isOpened = false;
                 mSocket = null;
+                mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
             }
         }
     }
@@ -173,6 +176,9 @@ public class TCPHelper {
                 case HANDLE_OPEN_SUCCESS:
                     if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_OPEN_SUCCESS);
                     break;
+                case HANDLE_CLOSE_SUCCESS:
+                    if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_CLOSE_SUCCESS);
+                    break;
                 case HANDLE_OPEN_TIMEOUT:
                     if (eventListener != null) eventListener.onTcpEvent(TCPHelper.this,TCP_EVENT.TCP_OPEN_TIMEOUT);
                     break;
@@ -213,6 +219,7 @@ public class TCPHelper {
                         }else if(len == -1){
                             Log.e(TAG, "receiveThread: read -1");
                             mHandler.sendEmptyMessage(HANDLE_BREAK_OFF);
+                            Thread.sleep(100);
                             //break;
                         }
                     } catch (SocketTimeoutException e) {
@@ -226,6 +233,7 @@ public class TCPHelper {
                     }
                 }
                 isStartRecv = false;
+                receiveThread = null;
                 Log.d(TAG, "receiveThread: end!");
             }
         });
@@ -233,6 +241,10 @@ public class TCPHelper {
     }
 
     public void stopReceiveData() {
+        isStartRecv = false;
+    }
+
+    public void stopReceiveDataSync() {
         if (!isStartRecv) return;
         isStartRecv = false;
         try {
@@ -242,28 +254,36 @@ public class TCPHelper {
             }
         } catch (Exception e) {
             Log.e(TAG, "stopReceiveData error.e=" + e.toString());
+            mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
         }
     }
 
     public void closeSocket() {
-        stopReceiveData();
-        try {
-            if (mSocket != null && !mSocket.isClosed()) {
-                mSocket.close();
-                mSocket = null;
+        new Thread(){
+            @Override
+            public void run() {
+                stopReceiveDataSync();
+                try {
+                    if (mSocket != null && !mSocket.isClosed()) {
+                        mSocket.close();
+                        mSocket = null;
+                    }
+                    if (outputStream != null) {
+                        outputStream.close();
+                        outputStream = null;
+                    }
+                    if (inputStream != null) {
+                        inputStream.close();
+                        inputStream = null;
+                    }
+                    isOpened = false;
+                    mHandler.sendEmptyMessage(HANDLE_CLOSE_SUCCESS);
+                } catch (Exception e) {
+                    Log.e(TAG, "closeSocket error.e=" + e.toString());
+                    mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
+                }
             }
-            if (outputStream != null) {
-                outputStream.close();
-                outputStream = null;
-            }
-            if (inputStream != null) {
-                inputStream.close();
-                inputStream = null;
-            }
-            isOpened = false;
-        } catch (Exception e) {
-            Log.e(TAG, "closeSocket error.e=" + e.toString());
-        }
+        }.start();
     }
 
 
@@ -313,6 +333,7 @@ public class TCPHelper {
 
     public enum TCP_EVENT{
         TCP_OPEN_SUCCESS,
+        TCP_CLOSE_SUCCESS,
         TCP_OPEN_FAILED,
         TCP_OPEN_TIMEOUT,
         TCP_SEND_ERROR,

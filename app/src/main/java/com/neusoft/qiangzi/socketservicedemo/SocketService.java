@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.IBinder;
@@ -22,13 +23,14 @@ import androidx.core.app.NotificationCompat;
 public class SocketService extends Service {
     public static final String SERVICE_NAME = "com.neusoft.qiangzi.socketservicedemo.SocketService";
     private static final String TAG = "SocketService";
+    private static final String SHP_NAME = "socket_config";
     private int localPort = 6000;
     private int remotePort = 6000;
     private String remoteIP = "10.0.2.2";
     private UDPHelper udpHelper = null;
     private TCPHelper tcpHelper = null;
     private TCPServerHelper tcpServerHelper = null;
-    private RemoteCallbackList<IOnSocketReceivedListener> mListenerList = new RemoteCallbackList();
+    private RemoteCallbackList<IOnSocketReceivedListener> mListenerList = new RemoteCallbackList<>();
 
     public SocketService() {
     }
@@ -38,6 +40,7 @@ public class SocketService extends Service {
         super.onCreate();
         Log.d(TAG, "onCreate: is called.");
 
+        loadSocketParameter();
     }
 
     @Override
@@ -88,14 +91,22 @@ public class SocketService extends Service {
                                 switch (e){
                                     case UDP_OPEN_SUCCESS:
                                         if(udpHelper!=null)udpHelper.startReceiveData();
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_SUCCESS);
+                                        break;
+                                    case UDP_CLOSE_SUCCESS:
+                                        broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
                                         break;
                                     case UDP_OPEN_FAILED:
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_FAILED);
                                         break;
                                     case UDP_SEND_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.SEND_ERROR);
                                         break;
                                     case UDP_RECV_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.RECV_ERROR);
                                         break;
                                     case UDP_UNKNOWN_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
                                         break;
                                 }
                             }
@@ -133,17 +144,26 @@ public class SocketService extends Service {
                                 switch (e){
                                     case TCP_OPEN_SUCCESS:
                                         if(tcpHelper!=null)tcpHelper.startReceiveData();
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_SUCCESS);
+                                        break;
+                                    case TCP_CLOSE_SUCCESS:
+                                        broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
                                         break;
                                     case TCP_OPEN_FAILED:
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_FAILED);
                                         break;
                                     case TCP_OPEN_TIMEOUT:
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_TIMEOUT);
                                         break;
                                     case TCP_SEND_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.SEND_ERROR);
                                         break;
                                     case TCP_RECV_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.RECV_ERROR);
                                         break;
                                     case TCP_BREAK_OFF:
                                         Log.d(TAG, "onTcpEvent: detect disconnect.");
+                                        broadcastEvent(IOnSocketReceivedListener.BREAK_OFF);
                                         if(tcpHelper!=null){
                                             tcpHelper.stopReceiveData();
                                             tcpHelper.closeSocket();
@@ -151,6 +171,7 @@ public class SocketService extends Service {
                                         }
                                         break;
                                     case TCP_UNKNOWN_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
                                         break;
                                 }
                             }
@@ -190,22 +211,32 @@ public class SocketService extends Service {
                                     public void onTcpEvent(TCPHelper tcpHelper, TCPHelper.TCP_EVENT e) {
                                         switch (e){
                                             case TCP_OPEN_SUCCESS:
+                                                broadcastEvent(IOnSocketReceivedListener.ACCEPT_SUCCESS);
+                                                break;
+                                            case TCP_CLOSE_SUCCESS:
+                                                broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
                                                 break;
                                             case TCP_OPEN_FAILED:
+                                                broadcastEvent(IOnSocketReceivedListener.ACCEPT_ERROR);
                                                 break;
                                             case TCP_OPEN_TIMEOUT:
+                                                broadcastEvent(IOnSocketReceivedListener.OPEN_TIMEOUT);
                                                 break;
                                             case TCP_SEND_ERROR:
+                                                broadcastEvent(IOnSocketReceivedListener.SEND_ERROR);
                                                 break;
                                             case TCP_RECV_ERROR:
+                                                broadcastEvent(IOnSocketReceivedListener.RECV_ERROR);
                                                 break;
                                             case TCP_BREAK_OFF:
                                                 Log.d(TAG, "onTcpEvent: detect disconnect.");
+                                                broadcastEvent(IOnSocketReceivedListener.BREAK_OFF);
                                                 tcpHelper.stopReceiveData();
                                                 tcpHelper.closeSocket();
                                                 if(tcpServerHelper!=null)tcpServerHelper.dropClient(tcpHelper);
                                                 break;
                                             case TCP_UNKNOWN_ERROR:
+                                                broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
                                                 break;
                                         }
                                     }
@@ -218,12 +249,19 @@ public class SocketService extends Service {
                             public void onEvent(TCPServerHelper.EVENT e) {
                                 switch (e){
                                     case OPEN_SUCCESS:
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_SUCCESS);
+                                        break;
+                                    case CLOSE_SUCCESS:
+                                        broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
                                         break;
                                     case OPEN_FAILED:
+                                        broadcastEvent(IOnSocketReceivedListener.OPEN_FAILED);
                                         break;
                                     case ACCEPT_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.ACCEPT_ERROR);
                                         break;
                                     case UNKNOWN_ERROR:
+                                        broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
                                         break;
                                 }
                             }
@@ -260,6 +298,7 @@ public class SocketService extends Service {
             @Override
             public void setLocalPort(int Port) throws RemoteException {
                 SocketService.this.localPort = Port;
+                saveSocketParameter("localPort");
                 if(udpHelper!=null) {
                     udpHelper.setLocalPort(Port);
                     udpHelper.restartReceiveData();
@@ -278,6 +317,7 @@ public class SocketService extends Service {
             @Override
             public void setRemoteIP(String ip) throws RemoteException {
                 SocketService.this.remoteIP = ip;
+                saveSocketParameter("remoteIP");
                 if(udpHelper!=null){
                     udpHelper.setRemoteIP(ip);
                 }
@@ -294,6 +334,7 @@ public class SocketService extends Service {
             @Override
             public void setRemotePort(int port) throws RemoteException {
                 SocketService.this.remotePort = port;
+                saveSocketParameter("remotePort");
                 if(udpHelper!=null){
                     udpHelper.setRemotePort(port);
                 }
@@ -357,10 +398,29 @@ public class SocketService extends Service {
         };
     }
 
+    private void loadSocketParameter() {
+        SharedPreferences shp = getSharedPreferences(SHP_NAME, MODE_PRIVATE);
+        localPort = shp.getInt("localPort", 6000);
+        remoteIP = shp.getString("remoteIP", "127.0.0.1");
+        remotePort = shp.getInt("remotePort", 6000);
+    }
+
+    private void saveSocketParameter(String param) {
+        SharedPreferences shp = getSharedPreferences(SHP_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = shp.edit();
+        if(param.equals("localPort"))
+            editor.putInt("localPort", localPort);
+        else if(param.equals("remoteIP"))
+            editor.putString("remoteIP", remoteIP);
+        else if(param.equals("remotePort"))
+            editor.putInt("remotePort", remotePort);
+        editor.apply();
+    }
+
     private void broadcastReceivedData(String data) {
         synchronized (mListenerList) {
             int n = mListenerList.beginBroadcast();
-            Log.d(TAG, "broadcastReceivedData: begin n="+n);
+//            Log.d(TAG, "broadcastReceivedData: begin n="+n);
             try {
                 for (int i = 0; i < n; i++) {
                     IOnSocketReceivedListener listener = mListenerList.getBroadcastItem(i);
@@ -373,7 +433,26 @@ public class SocketService extends Service {
                 e.printStackTrace();
             }
             mListenerList.finishBroadcast();
-            Log.d(TAG, "broadcastReceivedData: end");
+//            Log.d(TAG, "broadcastReceivedData: end");
+        }
+    }
+    private void broadcastEvent(int event) {
+        synchronized (mListenerList) {
+            int n = mListenerList.beginBroadcast();
+//            Log.d(TAG, "broadcastEvent: begin n="+n);
+            try {
+                for (int i = 0; i < n; i++) {
+                    IOnSocketReceivedListener listener = mListenerList.getBroadcastItem(i);
+                    if (listener != null) {
+                        listener.onEvent(event);
+                    }
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "broadcastEvent: error!");
+                e.printStackTrace();
+            }
+            mListenerList.finishBroadcast();
+//            Log.d(TAG, "broadcastEvent: end");
         }
     }
 

@@ -23,6 +23,7 @@ public class TCPServerHelper {
     private OnEventListener eventListener = null;
 
     private final int HANDLE_OPEN_SUCCESS= 101;
+    private final int HANDLE_CLOSE_SUCCESS= 111;
     private final int HANDLE_OPEN_FAILED= 102;
     private final int HANDLE_ACCEPT_ERROR= 104;
     private final int HANDLE_UNKNOWN_ERROR= 105;
@@ -81,6 +82,7 @@ public class TCPServerHelper {
                 }
                 try {
                     mServerSocket.close();
+                    mHandler.sendEmptyMessage(HANDLE_CLOSE_SUCCESS);
                 } catch (IOException e) {
                     mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
                     e.printStackTrace();
@@ -92,6 +94,10 @@ public class TCPServerHelper {
     }
 
     public void listenStop(){
+        isListenStart = false;
+    }
+
+    public void listenStopSync(){
         if(!isListenStart)return;
         isListenStart = false;
         if(listenThread!=null && listenThread.isAlive()){
@@ -109,7 +115,7 @@ public class TCPServerHelper {
             @Override
             public void run() {
                 dropAllClient();
-                listenStop();
+                listenStopSync();
                 listenStart();
             }
         }.start();
@@ -122,6 +128,9 @@ public class TCPServerHelper {
             switch (msg.what) {
                 case HANDLE_OPEN_SUCCESS:
                     if (eventListener != null) eventListener.onEvent(EVENT.OPEN_SUCCESS);
+                    break;
+                case HANDLE_CLOSE_SUCCESS:
+                    if (eventListener != null) eventListener.onEvent(EVENT.CLOSE_SUCCESS);
                     break;
                 case HANDLE_OPEN_FAILED:
                     if (eventListener != null) eventListener.onEvent(EVENT.OPEN_FAILED);
@@ -192,6 +201,7 @@ public class TCPServerHelper {
     }
     public enum EVENT{
         OPEN_SUCCESS,
+        CLOSE_SUCCESS,
         OPEN_FAILED,
         ACCEPT_ERROR,
         UNKNOWN_ERROR,
