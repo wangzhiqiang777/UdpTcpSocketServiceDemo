@@ -5,15 +5,14 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.neusoft.qiangzi.socketservicedemo.utils.SocketUtils;
+
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TCPHelper {
     private final String TAG = "TCPHelper";
@@ -26,7 +25,6 @@ public class TCPHelper {
     private OnReceivedListener mListener = null;
     private OnTCPEventListener eventListener = null;
     private Thread receiveThread = null;
-    private InetAddress iaRemoteIP = null;
     private boolean isOpened = false;
     private boolean isStartRecv = false;
     private String receivedMsg;
@@ -80,11 +78,10 @@ public class TCPHelper {
         return localPort;
     }
 
-    public boolean setRemoteIP(String ip) {
-        if (isIP(ip)) {
+    public void setRemoteIP(String ip) {
+        if (SocketUtils.isIP(ip)) {
             remoteIP = ip;
-            return true;
-        } else return false;
+        }
     }
     public String getRemoteIP() {
         if(!remoteIP.isEmpty()){
@@ -151,7 +148,6 @@ public class TCPHelper {
                 } catch (Exception e) {
                     mHandler.sendEmptyMessage(HANDLE_SEND_ERROR);
                     Log.e(TAG, "send error.e=" + e.toString());
-                    return;
                 }
             }
         });
@@ -284,47 +280,6 @@ public class TCPHelper {
                 }
             }
         }.start();
-    }
-
-
-    public static boolean isIP(String addr) {
-        if (addr.length() < 7 || addr.length() > 15 || "".equals(addr)) {
-            return false;
-        }
-        /**
-         * 判断IP格式和范围
-         */
-        String rexp = "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}";
-
-        Pattern pat = Pattern.compile(rexp);
-
-        Matcher mat = pat.matcher(addr);
-
-        boolean ipAddress = mat.find();
-
-        //============对之前的ip判断的bug在进行判断
-        if (ipAddress == true) {
-            String ips[] = addr.split("\\.");
-
-            if (ips.length == 4) {
-                try {
-                    for (String ip : ips) {
-                        if (Integer.parseInt(ip) < 0 || Integer.parseInt(ip) > 255) {
-                            return false;
-                        }
-
-                    }
-                } catch (Exception e) {
-                    return false;
-                }
-
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        return ipAddress;
     }
 
     public interface OnReceivedListener {

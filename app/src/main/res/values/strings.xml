@@ -1,3 +1,26 @@
 <resources>
     <string name="app_name">SocketServiceDemo</string>
+    <string name="event_msg_open_uccess">打开端口成功！</string>
+    <string name="event_msg_close_success">关闭端口成功！</string>
+    <string name="event_msg_access_success">客户端接入成功！</string>
+    <string name="event_msg_open_error">打开端口失败！</string>
+    <string name="event_msg_open_timeout">连接超时！</string>
+    <string name="event_msg_network_break_off">网络断开！</string>
+    <string name="event_msg_send_error">发送失败！</string>
+    <string name="event_msg_receive_error">接收失败！</string>
+    <string name="event_msg_client_accept_error">客户端接入失败！</string>
+    <string name="event_msg_unknown_error">未知网络错误！</string>
+    <string name="main_activity_local_receive_port">本地接收端口</string>
+    <string name="main_activity_remote_ip">远端IP</string>
+    <string name="main_activity_clear">清除</string>
+    <string name="main_activity_start_service">启动网络服务</string>
+    <string name="main_activity_service_not_start">网络服务未启动</string>
+    <string name="main_activity_service_running">网络服务运行中</string>
+    <string name="main_activity_send">发送</string>
+    <string name="main_activity_default_port">6000</string>
+    <string name="main_activity_default_ip">10.0.2.2</string>
+    <string name="main_activity_remote_port">Port</string>
+    <string name="main_activity_type_udp">UDP</string>
+    <string name="main_activity_type_tcp_client">TCP Client</string>
+    <string name="main_activity_type_tcp_server">TCP Server</string>
 </resources>

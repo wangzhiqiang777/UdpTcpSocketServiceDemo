@@ -79,35 +79,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public void onEvent(int e) throws RemoteException {
             switch (e){
                 case IOnSocketReceivedListener.OPEN_SUCCESS:
-                    Toast.makeText(MainActivity.this,"打开端口成功！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_open_uccess,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.CLOSE_SUCCESS:
-                    Toast.makeText(MainActivity.this,"关闭端口成功！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_close_success,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.ACCEPT_SUCCESS:
-                    Toast.makeText(MainActivity.this,"客户端接入成功！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_access_success,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.OPEN_FAILED:
-                    Toast.makeText(MainActivity.this,"打开端口失败！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_open_error,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.OPEN_TIMEOUT:
-                    Toast.makeText(MainActivity.this,"连接超时！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_open_timeout,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.BREAK_OFF:
-                    Toast.makeText(MainActivity.this,"网络断开！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_network_break_off,Toast.LENGTH_SHORT).show();
                     if(swTcp.isChecked())swTcp.setChecked(false);
                     break;
                 case IOnSocketReceivedListener.SEND_ERROR:
-                    Toast.makeText(MainActivity.this,"发送失败！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_send_error,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.RECV_ERROR:
-                    Toast.makeText(MainActivity.this,"接收失败！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_receive_error,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.ACCEPT_ERROR:
-                    Toast.makeText(MainActivity.this,"客户端接入失败！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_client_accept_error,Toast.LENGTH_SHORT).show();
                     break;
                 case IOnSocketReceivedListener.UNKNOWN_ERROR:
-                    Toast.makeText(MainActivity.this,"未知网络错误！",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.event_msg_unknown_error,Toast.LENGTH_SHORT).show();
                     break;
             }
         }

@@ -5,12 +5,12 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.neusoft.qiangzi.socketservicedemo.utils.SocketUtils;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class UDPHelper {
     private final String TAG = "UDPHelper";
@@ -24,7 +24,7 @@ public class UDPHelper {
     private boolean isOpened = false;
     private boolean isStartRecv = false;
     private String ReceivedMsg;
-    private Object apiThreadLock = new Object();
+    private final Object apiThreadLock = new Object();
     private OnUDPEventListener eventListener = null;
 
     private final int HANDLE_RECV_MSG = 100;
@@ -52,7 +52,7 @@ public class UDPHelper {
     }
 
     public boolean setRemoteIP(String ip) {
-        if (isIP(ip)) {
+        if (SocketUtils.isIP(ip)) {
             RemoteIP = ip;
             Log.d(TAG, "setRemoteIP: ip=" + ip);
             return true;
@@ -117,7 +117,6 @@ public class UDPHelper {
                 } catch (Exception e) {
                     mHandler.sendEmptyMessage(HANDLE_SEND_ERROR);
                     Log.e(TAG, "send error.e=" + e.toString());
-                    return;
                 }
             }
         });
@@ -272,46 +271,6 @@ public class UDPHelper {
                 startReceiveData();
             }
         }.start();
-    }
-
-    public static boolean isIP(String addr) {
-        if (addr.length() < 7 || addr.length() > 15 || "".equals(addr)) {
-            return false;
-        }
-        /**
-         * 判断IP格式和范围
-         */
-        String rexp = "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}";
-
-        Pattern pat = Pattern.compile(rexp);
-
-        Matcher mat = pat.matcher(addr);
-
-        boolean ipAddress = mat.find();
-
-        //============对之前的ip判断的bug在进行判断
-        if (ipAddress == true) {
-            String ips[] = addr.split("\\.");
-
-            if (ips.length == 4) {
-                try {
-                    for (String ip : ips) {
-                        if (Integer.parseInt(ip) < 0 || Integer.parseInt(ip) > 255) {
-                            return false;
-                        }
-
-                    }
-                } catch (Exception e) {
-                    return false;
-                }
-
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        return ipAddress;
     }
 
     public interface OnUDPReceiveListener {

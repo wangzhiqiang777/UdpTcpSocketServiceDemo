@@ -14,6 +14,8 @@ import java.util.List;
 
 public class TCPServerHelper {
     private final String TAG = "TCPServerHelper";
+    private static final int THREAD_JOIN_TIME = 2000;
+
     private int localPort = 7000;
     private ServerSocket mServerSocket = null;
     private List<TCPHelper> acceptSocketList = new ArrayList<>();
@@ -102,7 +104,7 @@ public class TCPServerHelper {
         isListenStart = false;
         if(listenThread!=null && listenThread.isAlive()){
             try {
-                listenThread.join(2000);
+                listenThread.join(THREAD_JOIN_TIME);
             } catch (InterruptedException e) {
                 mHandler.sendEmptyMessage(HANDLE_UNKNOWN_ERROR);
                 e.printStackTrace();
@@ -147,9 +149,7 @@ public class TCPServerHelper {
 
     public void dropClient(TCPHelper tcpClient){
         if(tcpClient.isOpen()){
-            if(acceptSocketList.contains(tcpClient)){
-                acceptSocketList.remove(tcpClient);
-            }
+            acceptSocketList.remove(tcpClient);
             tcpClient.stopReceiveData();
             tcpClient.closeSocket();
         }
