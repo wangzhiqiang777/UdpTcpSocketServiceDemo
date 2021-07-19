@@ -1,6 +1,6 @@
 // ISocketBinder.aidl
 package com.neusoft.qiangzi.socketservicedemo;
-import com.neusoft.qiangzi.socketservicedemo.IOnSocketReceivedListener;
+import com.neusoft.qiangzi.socketservicedemo.ISocketListener;
 
 // Declare any non-default types here with import statements
 
@@ -9,8 +9,6 @@ interface ISocketBinder {
      * Demonstrates some basic types that you can use as parameters
      * and return values in AIDL.
      */
-//    void basicTypes(int anInt, long aLong, boolean aBoolean, float aFloat,
-//            double aDouble, String aString);
 
     const String SERVICE_NAME = "com.neusoft.qiangzi.socketservicedemo.SocketService";
 
@@ -32,6 +30,6 @@ interface ISocketBinder {
     void connect(String remoteIp, int remotePort);
     void disconnect(String remoteIp, int remotePort);
 
-    void registerListener(IOnSocketReceivedListener listener);
-    void unregisterListener(IOnSocketReceivedListener listener);
+    void registerListener(ISocketListener listener);
+    void unregisterListener(ISocketListener listener);
 }

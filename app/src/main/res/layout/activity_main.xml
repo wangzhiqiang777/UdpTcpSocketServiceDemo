@@ -56,7 +56,6 @@
         app:layout_constraintStart_toEndOf="@+id/textView2"
         app:layout_constraintTop_toTopOf="@+id/textView2"
         app:layout_constraintVertical_bias="0.0"
-        android:autofillHints=""
         tools:ignore="LabelFor" />
 
     <EditText
@@ -72,7 +71,6 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/textView"
         app:layout_constraintTop_toTopOf="@+id/textView"
-        android:autofillHints=""
         tools:ignore="LabelFor" />
 
     <EditText
@@ -88,7 +86,6 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/textView3"
         app:layout_constraintTop_toTopOf="@+id/textView3"
-        android:autofillHints=""
         tools:ignore="LabelFor" />
 
     <EditText
@@ -102,7 +99,6 @@
         app:layout_constraintStart_toStartOf="@+id/textView2"
         app:layout_constraintTop_toBottomOf="@+id/textView2"
         app:layout_constraintWidth_percent="0.7"
-        android:autofillHints=""
         tools:ignore="LabelFor" />
 
     <EditText
@@ -116,7 +112,6 @@
         app:layout_constraintStart_toStartOf="@+id/etSendText"
         app:layout_constraintTop_toBottomOf="@+id/textView3"
         app:layout_constraintWidth_percent="0.7"
-        android:autofillHints=""
         tools:ignore="LabelFor" />
 
     <Button

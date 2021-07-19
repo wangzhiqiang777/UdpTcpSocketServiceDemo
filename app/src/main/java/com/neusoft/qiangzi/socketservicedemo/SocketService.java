@@ -30,7 +30,7 @@ public class SocketService extends Service {
     private UDPHelper udpHelper = null;
     private TCPHelper tcpHelper = null;
     private TCPServerHelper tcpServerHelper = null;
-    private RemoteCallbackList<IOnSocketReceivedListener> mListenerList = new RemoteCallbackList<>();
+    private RemoteCallbackList<ISocketListener> mListenerList = new RemoteCallbackList<>();
 
     public SocketService() {
     }
@@ -91,22 +91,22 @@ public class SocketService extends Service {
                                 switch (e){
                                     case UDP_OPEN_SUCCESS:
                                         if(udpHelper!=null)udpHelper.startReceiveData();
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_SUCCESS);
+                                        broadcastEvent(ISocketListener.OPEN_SUCCESS);
                                         break;
                                     case UDP_CLOSE_SUCCESS:
-                                        broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
+                                        broadcastEvent(ISocketListener.CLOSE_SUCCESS);
                                         break;
                                     case UDP_OPEN_FAILED:
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_FAILED);
+                                        broadcastEvent(ISocketListener.OPEN_FAILED);
                                         break;
                                     case UDP_SEND_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.SEND_ERROR);
+                                        broadcastEvent(ISocketListener.SEND_ERROR);
                                         break;
                                     case UDP_RECV_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.RECV_ERROR);
+                                        broadcastEvent(ISocketListener.RECV_ERROR);
                                         break;
                                     case UDP_UNKNOWN_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
+                                        broadcastEvent(ISocketListener.UNKNOWN_ERROR);
                                         break;
                                 }
                             }
@@ -144,26 +144,26 @@ public class SocketService extends Service {
                                 switch (e){
                                     case TCP_OPEN_SUCCESS:
                                         if(tcpHelper!=null)tcpHelper.startReceiveData();
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_SUCCESS);
+                                        broadcastEvent(ISocketListener.OPEN_SUCCESS);
                                         break;
                                     case TCP_CLOSE_SUCCESS:
-                                        broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
+                                        broadcastEvent(ISocketListener.CLOSE_SUCCESS);
                                         break;
                                     case TCP_OPEN_FAILED:
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_FAILED);
+                                        broadcastEvent(ISocketListener.OPEN_FAILED);
                                         break;
                                     case TCP_OPEN_TIMEOUT:
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_TIMEOUT);
+                                        broadcastEvent(ISocketListener.OPEN_TIMEOUT);
                                         break;
                                     case TCP_SEND_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.SEND_ERROR);
+                                        broadcastEvent(ISocketListener.SEND_ERROR);
                                         break;
                                     case TCP_RECV_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.RECV_ERROR);
+                                        broadcastEvent(ISocketListener.RECV_ERROR);
                                         break;
                                     case TCP_BREAK_OFF:
                                         Log.d(TAG, "onTcpEvent: detect disconnect.");
-                                        broadcastEvent(IOnSocketReceivedListener.BREAK_OFF);
+                                        broadcastEvent(ISocketListener.BREAK_OFF);
                                         if(tcpHelper!=null){
                                             tcpHelper.stopReceiveData();
                                             tcpHelper.closeSocket();
@@ -171,7 +171,7 @@ public class SocketService extends Service {
                                         }
                                         break;
                                     case TCP_UNKNOWN_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
+                                        broadcastEvent(ISocketListener.UNKNOWN_ERROR);
                                         break;
                                 }
                             }
@@ -211,32 +211,32 @@ public class SocketService extends Service {
                                     public void onTcpEvent(TCPHelper tcpHelper, TCPHelper.TCP_EVENT e) {
                                         switch (e){
                                             case TCP_OPEN_SUCCESS:
-                                                broadcastEvent(IOnSocketReceivedListener.ACCEPT_SUCCESS);
+                                                broadcastEvent(ISocketListener.ACCEPT_SUCCESS);
                                                 break;
                                             case TCP_CLOSE_SUCCESS:
-                                                broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
+                                                broadcastEvent(ISocketListener.CLOSE_SUCCESS);
                                                 break;
                                             case TCP_OPEN_FAILED:
-                                                broadcastEvent(IOnSocketReceivedListener.ACCEPT_ERROR);
+                                                broadcastEvent(ISocketListener.ACCEPT_ERROR);
                                                 break;
                                             case TCP_OPEN_TIMEOUT:
-                                                broadcastEvent(IOnSocketReceivedListener.OPEN_TIMEOUT);
+                                                broadcastEvent(ISocketListener.OPEN_TIMEOUT);
                                                 break;
                                             case TCP_SEND_ERROR:
-                                                broadcastEvent(IOnSocketReceivedListener.SEND_ERROR);
+                                                broadcastEvent(ISocketListener.SEND_ERROR);
                                                 break;
                                             case TCP_RECV_ERROR:
-                                                broadcastEvent(IOnSocketReceivedListener.RECV_ERROR);
+                                                broadcastEvent(ISocketListener.RECV_ERROR);
                                                 break;
                                             case TCP_BREAK_OFF:
                                                 Log.d(TAG, "onTcpEvent: detect disconnect.");
-                                                broadcastEvent(IOnSocketReceivedListener.BREAK_OFF);
+                                                broadcastEvent(ISocketListener.BREAK_OFF);
                                                 tcpHelper.stopReceiveData();
                                                 tcpHelper.closeSocket();
                                                 if(tcpServerHelper!=null)tcpServerHelper.dropClient(tcpHelper);
                                                 break;
                                             case TCP_UNKNOWN_ERROR:
-                                                broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
+                                                broadcastEvent(ISocketListener.UNKNOWN_ERROR);
                                                 break;
                                         }
                                     }
@@ -249,19 +249,19 @@ public class SocketService extends Service {
                             public void onEvent(TCPServerHelper.EVENT e) {
                                 switch (e){
                                     case OPEN_SUCCESS:
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_SUCCESS);
+                                        broadcastEvent(ISocketListener.OPEN_SUCCESS);
                                         break;
                                     case CLOSE_SUCCESS:
-                                        broadcastEvent(IOnSocketReceivedListener.CLOSE_SUCCESS);
+                                        broadcastEvent(ISocketListener.CLOSE_SUCCESS);
                                         break;
                                     case OPEN_FAILED:
-                                        broadcastEvent(IOnSocketReceivedListener.OPEN_FAILED);
+                                        broadcastEvent(ISocketListener.OPEN_FAILED);
                                         break;
                                     case ACCEPT_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.ACCEPT_ERROR);
+                                        broadcastEvent(ISocketListener.ACCEPT_ERROR);
                                         break;
                                     case UNKNOWN_ERROR:
-                                        broadcastEvent(IOnSocketReceivedListener.UNKNOWN_ERROR);
+                                        broadcastEvent(ISocketListener.UNKNOWN_ERROR);
                                         break;
                                 }
                             }
@@ -384,13 +384,13 @@ public class SocketService extends Service {
             }
 
             @Override
-            public void registerListener(IOnSocketReceivedListener listener) throws RemoteException {
+            public void registerListener(ISocketListener listener) throws RemoteException {
                 mListenerList.register(listener);
                 Log.d(TAG, "registerListener: current size:" + mListenerList.getRegisteredCallbackCount());
             }
 
             @Override
-            public void unregisterListener(IOnSocketReceivedListener listener) throws RemoteException {
+            public void unregisterListener(ISocketListener listener) throws RemoteException {
                 mListenerList.unregister(listener);
                 Log.d(TAG, "unregisterListener: current size:" + mListenerList.getRegisteredCallbackCount());
             }
@@ -423,7 +423,7 @@ public class SocketService extends Service {
 //            Log.d(TAG, "broadcastReceivedData: begin n="+n);
             try {
                 for (int i = 0; i < n; i++) {
-                    IOnSocketReceivedListener listener = mListenerList.getBroadcastItem(i);
+                    ISocketListener listener = mListenerList.getBroadcastItem(i);
                     if (listener != null) {
                         listener.onReceived(data);
                     }
@@ -442,7 +442,7 @@ public class SocketService extends Service {
 //            Log.d(TAG, "broadcastEvent: begin n="+n);
             try {
                 for (int i = 0; i < n; i++) {
-                    IOnSocketReceivedListener listener = mListenerList.getBroadcastItem(i);
+                    ISocketListener listener = mListenerList.getBroadcastItem(i);
                     if (listener != null) {
                         listener.onEvent(event);
                     }

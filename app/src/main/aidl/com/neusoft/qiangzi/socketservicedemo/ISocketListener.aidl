@@ -1,9 +1,9 @@
-// IOnSocketReceivedListener.aidl
+// ISocketListener.aidl
 package com.neusoft.qiangzi.socketservicedemo;
 
 // Declare any non-default types here with import statements
 
-interface IOnSocketReceivedListener {
+interface ISocketListener {
     /**
      * Demonstrates some basic types that you can use as parameters
      * and return values in AIDL.

@@ -5,16 +5,12 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.ActivityManager;
-import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.os.RemoteException;
 import android.text.InputType;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -23,7 +19,6 @@ import android.widget.Switch;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import java.net.ServerSocket;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, CompoundButton.OnCheckedChangeListener {
@@ -38,75 +33,60 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Button btnClearReceive;
     Switch swUdp, swTcp,swTcpServer;
     ToggleButton btStartService;
+    SocketServiceManager serviceManager;
 
-    ISocketBinder socketBinder;
-    ServiceConnection connection = new ServiceConnection() {
+    SocketServiceManager.OnBindedListener bindedListener = new SocketServiceManager.OnBindedListener() {
         @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            Log.d(TAG, "onServiceConnected: is called.");
-            socketBinder = (ISocketBinder) iBinder;
-            if(socketBinder==null){
-                Toast.makeText(MainActivity.this,"服务连接失败！",Toast.LENGTH_SHORT).show();
-                return;
-            }
+        public void onBinded() {
             //初始化设置参数
-            try {
-                socketBinder.registerListener(receivedListener);
-                //恢复状态
-                swUdp.setChecked(socketBinder.isUDPEnabled());
-                swTcp.setChecked(socketBinder.isTCPEnabled());
-                swTcpServer.setChecked(socketBinder.isTCPServerEnabled());
-                etLocalPort.setText(String.valueOf(socketBinder.getLocalPortPort()));
-                etRemoteIP.setText(socketBinder.getRemoteIP());
-                etRemotePort.setText(String.valueOf(socketBinder.getRemotePort()));
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-
+            serviceManager.registerListener(socketListener);
+            //恢复状态
+            swUdp.setChecked(serviceManager.isUDPEnabled());
+            swTcp.setChecked(serviceManager.isTCPEnabled());
+            swTcpServer.setChecked(serviceManager.isTCPServerEnabled());
+            etLocalPort.setText(String.valueOf(serviceManager.getLocalPortPort()));
+            etRemoteIP.setText(serviceManager.getRemoteIP());
+            etRemotePort.setText(String.valueOf(serviceManager.getRemotePort()));
         }
     };
-    IOnSocketReceivedListener receivedListener = new IOnSocketReceivedListener.Stub() {
+    
+    ISocketListener socketListener = new ISocketListener.Stub() {
         @Override
         public void onReceived(String data) throws RemoteException {
             etRecieveText.append("\n"+data);
         }
-
         @Override
         public void onEvent(int e) throws RemoteException {
             switch (e){
-                case IOnSocketReceivedListener.OPEN_SUCCESS:
+                case ISocketListener.OPEN_SUCCESS:
                     Toast.makeText(MainActivity.this, R.string.event_msg_open_uccess,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.CLOSE_SUCCESS:
+                case ISocketListener.CLOSE_SUCCESS:
                     Toast.makeText(MainActivity.this, R.string.event_msg_close_success,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.ACCEPT_SUCCESS:
+                case ISocketListener.ACCEPT_SUCCESS:
                     Toast.makeText(MainActivity.this, R.string.event_msg_access_success,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.OPEN_FAILED:
+                case ISocketListener.OPEN_FAILED:
                     Toast.makeText(MainActivity.this, R.string.event_msg_open_error,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.OPEN_TIMEOUT:
+                case ISocketListener.OPEN_TIMEOUT:
                     Toast.makeText(MainActivity.this, R.string.event_msg_open_timeout,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.BREAK_OFF:
+                case ISocketListener.BREAK_OFF:
                     Toast.makeText(MainActivity.this, R.string.event_msg_network_break_off,Toast.LENGTH_SHORT).show();
                     if(swTcp.isChecked())swTcp.setChecked(false);
                     break;
-                case IOnSocketReceivedListener.SEND_ERROR:
+                case ISocketListener.SEND_ERROR:
                     Toast.makeText(MainActivity.this, R.string.event_msg_send_error,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.RECV_ERROR:
+                case ISocketListener.RECV_ERROR:
                     Toast.makeText(MainActivity.this, R.string.event_msg_receive_error,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.ACCEPT_ERROR:
+                case ISocketListener.ACCEPT_ERROR:
                     Toast.makeText(MainActivity.this, R.string.event_msg_client_accept_error,Toast.LENGTH_SHORT).show();
                     break;
-                case IOnSocketReceivedListener.UNKNOWN_ERROR:
+                case ISocketListener.UNKNOWN_ERROR:
                     Toast.makeText(MainActivity.this, R.string.event_msg_unknown_error,Toast.LENGTH_SHORT).show();
                     break;
             }
@@ -146,30 +126,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         swTcp.setOnCheckedChangeListener(this);
         swTcpServer.setOnCheckedChangeListener(this);
         btStartService.setOnCheckedChangeListener(this);
+        //启动服务
+        serviceManager = new SocketServiceManager(this);
+        serviceManager.setOnBindedListener(bindedListener);
+        serviceManager.setSocketListener(socketListener);
+        serviceManager.start();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if(isServiceRunning(ISocketBinder.SERVICE_NAME)){
-            btStartService.setChecked(true);
-            Intent i = new Intent(this, SocketService.class);
-            bindService(i, connection, BIND_AUTO_CREATE);
-        }
+        serviceManager.bind();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if(socketBinder!=null) {
-            try {
-                socketBinder.unregisterListener(receivedListener);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-            unbindService(connection);
-            socketBinder = null;
-        }
+        serviceManager.unbind();
     }
 
     @Override
@@ -185,12 +158,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 inputTitleDialog(view.getId(),etLocalPort.getText().toString());
                 break;
             case R.id.buttonSend:
-                if(socketBinder!=null){
-                    try {
-                        socketBinder.sendText(etSendText.getText().toString());
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                    }
+                if(serviceManager.isStared()){
+                    serviceManager.sendText(etSendText.getText().toString());
                 }else {
                     Toast.makeText(this,"请开启服务！",Toast.LENGTH_SHORT).show();
                 }
@@ -200,7 +169,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
-
 
     private void inputTitleDialog(final int viewId, String currentText) {
 
@@ -214,32 +182,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 .setNegativeButton("取消", null)
                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        if(socketBinder == null){
-                            Toast.makeText(MainActivity.this,"没有链接到服务！",Toast.LENGTH_SHORT).show();
+                        if (!serviceManager.isStared()) {
+                            Toast.makeText(MainActivity.this, "没有链接到服务！", Toast.LENGTH_SHORT).show();
                             return;
                         }
                         String input = etInput.getText().toString();
-                        try {
-                            switch (viewId){
-                                case R.id.etRemoteIP:
-                                    socketBinder.setRemoteIP(input);
-                                    etRemoteIP.setText(input);
-                                    break;
-                                case R.id.etRemotePort:
-                                    socketBinder.setRemotePort(Integer.parseInt(input));
-                                    etRemotePort.setText(input);
-                                    break;
-                                case R.id.etLocalPort:
-                                    socketBinder.setLocalPort(Integer.parseInt(input));
-                                    etLocalPort.setText(input);
-                                    break;
-                            }
-                            Toast.makeText(MainActivity.this,"设置成功！",Toast.LENGTH_SHORT).show();
-                        }catch (Exception e){
-                            e.printStackTrace();
-                            Toast.makeText(MainActivity.this,"设置失败！",Toast.LENGTH_SHORT).show();
+                        switch (viewId) {
+                            case R.id.etRemoteIP:
+                                serviceManager.setRemoteIP(input);
+                                etRemoteIP.setText(input);
+                                break;
+                            case R.id.etRemotePort:
+                                serviceManager.setRemotePort(Integer.parseInt(input));
+                                etRemotePort.setText(input);
+                                break;
+                            case R.id.etLocalPort:
+                                serviceManager.setLocalPort(Integer.parseInt(input));
+                                etLocalPort.setText(input);
+                                break;
                         }
-
+                        Toast.makeText(MainActivity.this, "设置成功！", Toast.LENGTH_SHORT).show();
                     }
                 });
         builder.show();
@@ -249,53 +211,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
         if(!compoundButton.isPressed())return;
-        if(compoundButton.getId()!=R.id.toggleButtonStartService && socketBinder==null){
+        if(compoundButton.getId()!=R.id.toggleButtonStartService && !serviceManager.isStared()){
             Toast.makeText(this,"请开启服务！",Toast.LENGTH_SHORT).show();
             compoundButton.setChecked(false);
             return;
         }
         switch (compoundButton.getId()){
             case R.id.switchUdp:
-                try {
-                    socketBinder.setUDPEnabled(b);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
+                serviceManager.setUDPEnabled(b);
                 break;
             case R.id.switchTcp:
-                try {
-                    socketBinder.setTCPEnabled(b);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
+                serviceManager.setTCPEnabled(b);
                 break;
             case R.id.switchTcpServer:
-                try {
-                    socketBinder.setTCPServerEnabled(b);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
+                serviceManager.setTCPServerEnabled(b);
                 break;
             case R.id.toggleButtonStartService:
                 Intent i = new Intent(this, SocketService.class);
                 if(b){
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(i);
-                    }else {
-                        startService(i);
-                    }
-                    bindService(i, connection, BIND_AUTO_CREATE);
+                    serviceManager.start();
+                    serviceManager.bind();
                 }else {
-                    if(socketBinder!=null) {
-                        try {
-                            socketBinder.unregisterListener(receivedListener);
-                        } catch (RemoteException e) {
-                            e.printStackTrace();
-                        }
-                        unbindService(connection);
-                    }
-                    stopService(i);
-                    socketBinder = null;
+                    serviceManager.unbind();
+                    serviceManager.stop();
                     swUdp.setChecked(false);
                     swTcp.setChecked(false);
                     swTcpServer.setChecked(false);
@@ -303,17 +241,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
-    boolean isServiceRunning(String serviceName){
-        // 校验服务是否还存在
-        ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-        List<ActivityManager.RunningServiceInfo> services = am.getRunningServices(100);
-        for (ActivityManager.RunningServiceInfo info : services) {
-            // 得到所有正在运行的服务的名称
-            String name = info.service.getClassName();
-            if (serviceName.equals(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
+
 }
